@@ -55,10 +55,11 @@ export default defineEventHandler(async (event) => {
                 const { error } = await supabase
                     .from('organizations')
                     .update({
-                        subscription_status: 'active',
+                        stripe_customer_id: session.customer as string,
                         stripe_subscription_id: subscriptionId,
+                        subscription_status: 'active',
                         plan_type: planType
-                    } as any) // Type cast to bypass strict row check if needed
+                    } as any)
                     .eq('id', organizationId)
 
                 if (error) {

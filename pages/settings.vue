@@ -15,7 +15,8 @@ const activeSection = ref('profile')
 // Form States
 const profileData = ref({
   full_name: '',
-  avatar_url: ''
+  avatar_url: '',
+  website: ''
 })
 
 const notificationSettings = ref({
@@ -37,8 +38,15 @@ const { data: organization, refresh: refreshOrg } = useLazyAsyncData('settings-o
     .from('organizations')
     .select('*, plans(*)')
     .eq('id', orgId)
-    .single()
+    .single() as any
   return data
+})
+
+// Invoices
+const { data: invoices, pending: invoicesLoading } = useFetch('/api/stripe/invoices', {
+  lazy: true,
+  server: false,
+  watch: [selectedOrgId]
 })
 
 // Initial Load
@@ -51,14 +59,15 @@ const loadUserData = async () => {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, avatar_url')
+    .select('full_name, avatar_url, website')
     .eq('id', userId)
-    .single()
+    .single() as any
 
   if (profile) {
     profileData.value = {
       full_name: profile.full_name || '',
-      avatar_url: profile.avatar_url || ''
+      avatar_url: profile.avatar_url || '',
+      website: profile.website || ''
     }
   }
 
@@ -71,6 +80,7 @@ const loadUserData = async () => {
 }
 
 onMounted(async () => {
+  console.log('Config:', config.public)
   await validateOrg()
   await loadUserData()
   
@@ -88,7 +98,7 @@ const saveProfile = async () => {
   loading.value = true
 
   try {
-    // 1. Update Profiles Table
+    // 1. Upsert Profile
     const userId = user.value.id
     if (!userId || userId === 'undefined' || userId === 'null') {
       throw new Error('ID de usuário inválido')
@@ -96,13 +106,20 @@ const saveProfile = async () => {
 
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ 
+      .upsert({ 
+        id: userId,
         full_name: profileData.value.full_name,
-        avatar_url: profileData.value.avatar_url
+        avatar_url: profileData.value.avatar_url,
+        website: profileData.value.website,
+        updated_at: new Date().toISOString()
       })
-      .eq('id', userId)
 
-    if (profileError) throw profileError
+    if (profileError) {
+      if (profileError.code === '42501') {
+        throw new Error('Sem permissão para editar perfil')
+      }
+      throw profileError
+    }
 
     // 2. Update Auth Metadata (for notifications, etc)
     const { error: authError } = await supabase.auth.updateUser({
@@ -117,7 +134,8 @@ const saveProfile = async () => {
 
     toast.add({ title: 'Perfil atualizado!', color: 'emerald' })
   } catch (e: any) {
-    toast.add({ title: 'Erro ao salvar perfil', description: e.message, color: 'red' })
+    const description = e.message.includes('permission') ? 'Sem permissão para editar' : e.message
+    toast.add({ title: 'Erro ao salvar perfil', description, color: 'red' })
   } finally {
     loading.value = false
   }
@@ -241,6 +259,10 @@ const settingsSections = [
               <UInput :model-value="user?.email" disabled size="lg" class="opacity-50" />
             </UFormGroup>
 
+            <UFormGroup label="Website">
+              <UInput v-model="profileData.website" placeholder="https://exemplo.com" size="lg" />
+            </UFormGroup>
+
             <UButton 
               label="Salvar Alterações" 
               color="primary" 
@@ -327,7 +349,7 @@ const settingsSections = [
       </section>
 
       <!-- Subscription Section -->
-      <section v-if="activeSection === 'subscription'" class="space-y-8">
+      <section v-if="activeSection === 'subscription'" class="space-y-12">
         <div class="space-y-2">
           <h2 class="text-2xl font-bold text-white">Assinatura</h2>
           <p class="text-gray-400 text-sm">Plano atual: <span class="text-electric-400 font-bold uppercase">{{ organization?.plans?.name || 'Gratuito' }}</span></p>
@@ -355,15 +377,73 @@ const settingsSections = [
             </ul>
 
             <UButton 
-              :label="organization?.plans?.id === plan.priceId ? 'Plano Atual' : 'Assinar Agora'" 
+              :label="!plan.priceId ? 'Configuração de Preço Indisponível' : (organization?.plans?.id === plan.priceId ? 'Plano Atual' : 'Assinar Agora')" 
               :color="organization?.plans?.id === plan.priceId ? 'gray' : 'primary'"
               variant="solid"
               block
-              class="font-black h-12 rounded-2xl"
-              :disabled="organization?.plans?.id === plan.priceId || checkoutLoading !== null"
+              class="font-black h-12 rounded-2xl transition-all"
+              :disabled="organization?.plans?.id === plan.priceId || !plan.priceId || checkoutLoading !== null"
               :loading="checkoutLoading === plan.slug"
               @click="startCheckout(plan.slug as 'starter' | 'pro')"
             />
+          </UCard>
+        </div>
+
+        <!-- Invoices Table -->
+        <div class="space-y-6">
+          <div class="space-y-1">
+            <h3 class="text-xl font-bold text-white">Últimas Faturas</h3>
+            <p class="text-sm text-gray-400">Histórico de pagamentos e downloads de PDF.</p>
+          </div>
+
+          <UCard class="bg-gray-900/40 border-gray-800 rounded-3xl overflow-hidden">
+            <div v-if="invoicesLoading" class="p-8 space-y-4">
+              <USkeleton v-for="i in 3" :key="i" class="h-12 w-full bg-gray-800/50 rounded-xl" />
+            </div>
+            
+            <div v-else-if="!invoices?.length" class="p-12 text-center space-y-3">
+              <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-gray-700 mx-auto" />
+              <p class="text-gray-500 font-bold">Nenhuma fatura encontrada.</p>
+            </div>
+
+            <div v-else class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead class="bg-gray-950/50 border-b border-gray-800">
+                  <tr>
+                    <th class="px-6 py-4 text-xs font-black uppercase text-gray-500">Data</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase text-gray-500">Valor</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase text-gray-500">Status</th>
+                    <th class="px-6 py-4 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr v-for="invoice in invoices" :key="invoice.id" class="hover:bg-gray-800/20 transition-colors">
+                    <td class="px-6 py-4 text-sm text-white font-medium">{{ invoice.date }}</td>
+                    <td class="px-6 py-4 text-sm text-white font-black">{{ invoice.amount }}</td>
+                    <td class="px-6 py-4">
+                      <UBadge 
+                        :label="invoice.status" 
+                        :color="invoice.status === 'paid' ? 'emerald' : 'orange'" 
+                        variant="soft"
+                        class="capitalize rounded-lg font-bold"
+                      />
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <UButton
+                        v-if="invoice.pdf"
+                        :to="invoice.pdf"
+                        target="_blank"
+                        icon="i-heroicons-arrow-down-tray"
+                        color="gray"
+                        variant="ghost"
+                        size="xs"
+                        class="rounded-xl"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </UCard>
         </div>
       </section>
