@@ -36,7 +36,7 @@ const { data: organization, refresh: refreshOrg } = useLazyAsyncData('settings-o
   const { data } = await supabase
     .from('organizations')
     .select('*, plans(*)')
-    .eq('id', selectedOrgId.value)
+    .eq('id', orgId)
     .single()
   return data
 })
@@ -46,10 +46,13 @@ const loadUserData = async () => {
   if (!user.value) return
 
   // 1. Load from profiles table
+  const userId = user.value.id
+  if (!userId || userId === 'undefined' || userId === 'null') return
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, avatar_url')
-    .eq('id', user.value.id)
+    .eq('id', userId)
     .single()
 
   if (profile) {
@@ -86,13 +89,18 @@ const saveProfile = async () => {
 
   try {
     // 1. Update Profiles Table
+    const userId = user.value.id
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      throw new Error('ID de usuário inválido')
+    }
+
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ 
         full_name: profileData.value.full_name,
         avatar_url: profileData.value.avatar_url
       })
-      .eq('id', user.value.id)
+      .eq('id', userId)
 
     if (profileError) throw profileError
 
