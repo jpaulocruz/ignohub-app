@@ -25,27 +25,14 @@ const selectedItem = ref<InboxItem | null>(null)
 const activeFilter = ref<'all' | 'summary' | 'alert' | 'insight'>('all')
 const searchQuery = ref('')
 
-// Fetch summaries
-const { data: summaries, pending: summariesPending } = useLazyAsyncData('inbox-summaries', async () => {
+// Fetch inbox feed
+const { data: inboxFeed, pending: feedPending } = useLazyAsyncData('inbox-feed', async () => {
   if (!selectedOrgId.value) return []
   const { data } = await client
-    .from('summaries')
-    .select('*, groups:group_id(name, platform)')
+    .from('inbox_feed')
+    .select('*')
     .eq('organization_id', selectedOrgId.value)
     .order('created_at', { ascending: false })
-    .limit(50)
-  return data || []
-}, { watch: [selectedOrgId] })
-
-// Fetch alerts
-const { data: alerts, pending: alertsPending } = useLazyAsyncData('inbox-alerts', async () => {
-  if (!selectedOrgId.value) return []
-  const { data } = await client
-    .from('alerts')
-    .select('*, groups:group_id(name, platform)')
-    .eq('organization_id', selectedOrgId.value)
-    .order('created_at', { ascending: false })
-    .limit(50)
   return data || []
 }, { watch: [selectedOrgId] })
 
@@ -86,46 +73,13 @@ const demoItems: InboxItem[] = [
 
 // Combined inbox items
 const inboxItems = computed<InboxItem[]>(() => {
-  const items: InboxItem[] = []
+  const items = inboxFeed.value || []
   
-  // Add summaries
-  summaries.value?.forEach((s: any) => {
-    items.push({
-      id: `summary-${s.id}`,
-      type: 'summary',
-      title: s.groups?.name ? `Resumo - ${s.groups.name}` : 'Resumo',
-      description: s.summary_text?.substring(0, 150) + '...' || 'Resumo do período',
-      group_name: s.groups?.name || 'Grupo',
-      group_platform: s.groups?.platform || 'whatsapp',
-      created_at: s.created_at,
-      is_read: false
-    })
-  })
-  
-  // Add alerts
-  alerts.value?.forEach((a: any) => {
-    items.push({
-      id: `alert-${a.id}`,
-      type: 'alert',
-      title: a.title || 'Alerta',
-      description: a.summary || a.evidence_excerpt || 'Alerta detectado',
-      group_name: a.groups?.name || 'Grupo',
-      group_platform: a.groups?.platform || 'whatsapp',
-      created_at: a.created_at,
-      severity: a.severity,
-      is_read: a.is_read || false
-    })
-  })
-  
-  // If no real items, show demo items
   if (items.length === 0 && !pending.value) {
     return demoItems
   }
   
-  // Sort by date
-  items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  
-  return items
+  return items as InboxItem[]
 })
 
 // Filtered items
@@ -207,7 +161,7 @@ const parsedDescription = computed(() => {
   return marked.parse(selectedItem.value.description)
 })
 
-const pending = computed(() => summariesPending.value || alertsPending.value)
+const pending = computed(() => feedPending.value)
 </script>
 
 <template>

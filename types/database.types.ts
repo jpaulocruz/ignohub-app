@@ -337,5 +337,21 @@ export interface Database {
                 }
             }
         }
+        Views: {
+            inbox_feed: {
+                Row: {
+                    id: string
+                    organization_id: string
+                    type: 'summary' | 'alert' | 'insight'
+                    title: string
+                    description: string
+                    group_name: string
+                    group_platform: 'whatsapp' | 'telegram'
+                    severity: 'low' | 'medium' | 'high' | 'critical' | null
+                    is_read: boolean
+                    created_at: string
+                }
+            }
+        }
     }
 }
