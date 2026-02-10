@@ -4,25 +4,27 @@ import { serverSupabaseUser, serverSupabaseClient, serverSupabaseServiceRole } f
 import type { Database } from '~/types/database.types'
 
 export default defineEventHandler(async (event) => {
+    const config = useRuntimeConfig()
     const body = await readBody(event)
     const { planType, organizationId } = body
     const user = await serverSupabaseUser(event)
 
-    // Server-side price mapping
+    // Secure server-side price mapping using runtimeConfig
     const PRICES = {
-        starter: process.env.STRIPE_PRICE_STARTER,
-        pro: process.env.STRIPE_PRICE_PRO
+        starter: config.public.stripePriceStarter,
+        pro: config.public.stripePricePro
     } as Record<string, string | undefined>
 
     const selectedPriceId = PRICES[planType]
 
     if (!selectedPriceId) {
+        console.error('[Stripe Checkout] Invalid or missing planType:', planType)
         throw createError({ statusCode: 400, message: 'Invalid plan type' })
     }
     const client = await serverSupabaseClient<Database>(event)
     const serviceRole = await serverSupabaseServiceRole<Database>(event)
 
-    const config = useRuntimeConfig()
+
     const stripe = new Stripe(config.stripeSecretKey, {
         apiVersion: '2026-01-28.clover', // Use latest API version or maintain compatibility
         typescript: true,
@@ -106,7 +108,7 @@ export default defineEventHandler(async (event) => {
                             line_items: [{ price: selectedPriceId, quantity: 1 }],
                             success_url: `${config.public.siteUrl}/settings?tab=subscription&success=true&session_id={CHECKOUT_SESSION_ID}`,
                             cancel_url: `${config.public.siteUrl}/settings?tab=subscription&canceled=true`,
-                            metadata: { organizationId, planType }
+                            metadata: { organizationId, planType, userId: recoveredUser.id }
                         })
 
                         return { url: session.url }
@@ -234,7 +236,8 @@ export default defineEventHandler(async (event) => {
         cancel_url: `${config.public.siteUrl}/settings?tab=subscription&canceled=true`,
         metadata: {
             organizationId: targetOrgId,
-            planType: planType
+            planType: planType,
+            userId: user.id
         }
     })
 
