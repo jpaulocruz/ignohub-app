@@ -15,10 +15,12 @@ export default defineNuxtConfig({
     serviceKey: process.env.SUPABASE_SECRET_KEY,
   },
   runtimeConfig: {
-    stripeSecretKey: '',
-    stripeWebhookSecret: '',
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     public: {
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+      stripePriceStarter: process.env.STRIPE_PRICE_STARTER_ID,
+      stripePricePro: process.env.STRIPE_PRICE_PRO_ID,
     }
   },
   app: {
