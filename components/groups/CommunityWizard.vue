@@ -9,14 +9,15 @@ const steps = [
 
 const currentStep = ref(0)
 const loading = ref(false)
-const selectedAgent = ref<any>(null)
+const selectedAgent = ref<Database['public']['Tables']['agent_presets']['Row'] | null>(null)
 
-const client = useSupabaseClient()
+import type { Database } from '../../types/database.types'
+const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 
-const { data: presets } = await useAsyncData('agent-presets', async () => {
+const { data: presets } = await useAsyncData<Database['public']['Tables']['agent_presets']['Row'][]>('agent-presets', async () => {
   const { data } = await client.from('agent_presets').select('*')
-  return data
+  return (data || []) as Database['public']['Tables']['agent_presets']['Row'][]
 })
 
 const nextStep = () => {
@@ -39,6 +40,8 @@ const startVerification = async () => {
   // Simulação de verificação de webhook/bot entrando no grupo
   setTimeout(async () => {
     try {
+      if (!selectedOrgId.value) throw new Error('No organization selected')
+
       const { error } = await client.from('groups').insert({
         organization_id: selectedOrgId.value,
         name: 'Novo Grupo ' + (selectedAgent.value?.name || ''),

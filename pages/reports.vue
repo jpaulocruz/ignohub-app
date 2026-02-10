@@ -1,8 +1,23 @@
 <script setup lang="ts">
-const client = useSupabaseClient()
+import type { Database } from '../types/database.types'
+
+const client = useSupabaseClient<Database>()
+
+type AnalyticsItem = Database['public']['Tables']['group_analytics']['Row'] & {
+  groups: { name: string } | null
+}
+
+type Insight = Database['public']['Tables']['member_insights']['Row'] & {
+  groups: { name: string } | null
+}
+
+type Summary = Database['public']['Tables']['summaries']['Row'] & {
+  groups: { name: string } | null
+}
+
 const selectedOrgId = useCookie('selected_organization_id')
 
-const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData('org-analytics', async () => {
+const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData<AnalyticsItem[]>('org-analytics', async () => {
   if (!selectedOrgId.value) return []
   
   const { data, error } = await client
@@ -13,21 +28,21 @@ const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData
     .limit(30)
     
   if (error) return []
-  return data
+  return (data || []) as AnalyticsItem[]
 }, { watch: [selectedOrgId], server: false })
 
 // Buscar insights de membros (Líderes e Detratores)
-const { data: memberInsights, pending: membersPending } = useLazyAsyncData('member-insights', async () => {
+const { data: memberInsights, pending: membersPending } = useLazyAsyncData<Insight[]>('member-insights', async () => {
   if (!selectedOrgId.value) return []
   const { data } = await client
     .from('member_insights')
     .select('*, groups(name)')
     .eq('organization_id', selectedOrgId.value)
     .order('created_at', { ascending: false })
-  return data || []
+  return (data || []) as Insight[]
 }, { watch: [selectedOrgId], server: false })
 
-const { data: latestSummary, pending: summaryPending } = useLazyAsyncData('latest-exec-summary', async () => {
+const { data: latestSummary, pending: summaryPending } = useLazyAsyncData<Summary | null>('latest-exec-summary', async () => {
   if (!selectedOrgId.value) return null
   const { data } = await client
     .from('summaries')
@@ -36,7 +51,7 @@ const { data: latestSummary, pending: summaryPending } = useLazyAsyncData('lates
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
-  return data
+  return data as Summary | null
 }, { watch: [selectedOrgId], server: false })
 
 // Helpers para o Clima de Sentimento
@@ -51,7 +66,7 @@ const getClimate = (score: number) => {
 // Agrupar analytics por grupo para os climogramas
 const groupedAnalytics = computed(() => {
   if (!analytics.value) return {}
-  return analytics.value.reduce((acc: any, item: any) => {
+  return analytics.value.reduce((acc: any, item: AnalyticsItem) => {
     if (!acc[item.group_id]) acc[item.group_id] = { name: item.groups?.name, data: [] }
     acc[item.group_id].data.push(item)
     return acc

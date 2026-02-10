@@ -3,7 +3,8 @@ definePageMeta({
   layout: false
 })
 
-const supabase = useSupabaseClient()
+import type { Database } from '../types/database.types'
+const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const loading = ref(false)
 const email = ref('')

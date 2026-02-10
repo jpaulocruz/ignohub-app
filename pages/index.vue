@@ -1,8 +1,24 @@
 <script setup lang="ts">
-const client = useSupabaseClient()
+import type { Database } from '../types/database.types'
+
+const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 
-const { data: stats, pending: statsPending } = useLazyAsyncData('dashboard-stats', async () => {
+interface DashboardStats {
+  groups: number
+  messages: number
+  alerts: number
+}
+
+type RankingItem = Database['public']['Tables']['group_analytics']['Row'] & {
+  groups: { name: string } | null
+}
+
+type InsightItem = Pick<Database['public']['Tables']['summaries']['Row'], 'summary_text' | 'created_at'> & {
+  groups: { name: string } | null
+}
+
+const { data: stats, pending: statsPending } = useLazyAsyncData<DashboardStats>('dashboard-stats', async () => {
   if (!selectedOrgId.value) return { groups: 0, messages: 0, alerts: 0 }
   
   const [groups, alerts, messages] = await Promise.all([
@@ -18,7 +34,7 @@ const { data: stats, pending: statsPending } = useLazyAsyncData('dashboard-stats
   }
 }, { watch: [selectedOrgId], server: false })
 
-const { data: ranking, pending: rankingPending } = useLazyAsyncData('dashboard-ranking', async () => {
+const { data: ranking, pending: rankingPending } = useLazyAsyncData<RankingItem[]>('dashboard-ranking', async () => {
   if (!selectedOrgId.value) return []
   const { data } = await client
     .from('group_analytics')
@@ -26,10 +42,10 @@ const { data: ranking, pending: rankingPending } = useLazyAsyncData('dashboard-r
     .eq('organization_id', selectedOrgId.value)
     .order('sentiment_score', { ascending: true })
     .limit(5)
-  return data || []
+  return (data || []) as RankingItem[]
 }, { watch: [selectedOrgId], server: false })
 
-const { data: insights, pending: insightsPending } = useLazyAsyncData('dashboard-insights', async () => {
+const { data: insights, pending: insightsPending } = useLazyAsyncData<InsightItem[]>('dashboard-insights', async () => {
   if (!selectedOrgId.value) return []
   const { data } = await client
     .from('summaries')
@@ -37,7 +53,7 @@ const { data: insights, pending: insightsPending } = useLazyAsyncData('dashboard
     .eq('organization_id', selectedOrgId.value)
     .order('created_at', { ascending: false })
     .limit(3)
-  return data || []
+  return (data || []) as InsightItem[]
 }, { watch: [selectedOrgId], server: false })
 </script>
 
@@ -79,9 +95,9 @@ const { data: insights, pending: insightsPending } = useLazyAsyncData('dashboard
       <UCard class="bg-gray-900/40 border-gray-800 shadow-xl overflow-hidden relative group">
          <div class="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Alertas Críticos</p>
-        <div class="text-4xl font-black" :class="stats?.alerts > 0 ? 'text-red-500' : 'text-white'">
+        <div class="text-4xl font-black" :class="(stats?.alerts || 0) > 0 ? 'text-red-500' : 'text-white'">
           <USkeleton v-if="statsPending" class="h-10 w-12 bg-gray-800" />
-          <span v-else>{{ stats?.alerts }}</span>
+          <span v-else>{{ stats?.alerts || 0 }}</span>
         </div>
         <p class="text-[10px] text-gray-600 mt-2 font-bold uppercase tracking-tighter">Últimas 24 horas</p>
       </UCard>

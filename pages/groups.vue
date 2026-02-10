@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import CommunityWizard from '~/components/groups/CommunityWizard.vue'
+import type { Database } from '../types/database.types'
 
-const client = useSupabaseClient()
+const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 const showWizard = ref(false)
 

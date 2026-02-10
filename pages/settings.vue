@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { Database } from '../types/database.types'
+import { PLANS } from '~/utils/plans'
+
 const user = useSupabaseUser()
-const client = useSupabaseClient()
+const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 const colorMode = useColorMode()
 const toast = useToast()
@@ -8,60 +11,63 @@ const loading = ref(false)
 const checkoutLoading = ref<string | null>(null)
 const portalLoading = ref(false)
 
-// Stripe Price IDs (from Stripe dashboard)
-const STRIPE_PRICES = {
-  pro: {
-    priceId: 'price_1SwCVPDPO8OWHdcl1AIkjVrv',
-    productId: 'prod_Tu0S5qR6xQB1M8',
-    planId: 'fb7c884a-da33-4338-ba60-bcc7023513ab'
-  },
-  business: {
-    priceId: 'price_1SwCRgDPO8OWHdclRZ0v7tUz', 
-    productId: 'prod_Tu0SP7eQE6nT6q',
-    planId: '3b5210c1-f8eb-4dfb-9c35-73ad6005776f'
-  },
-  enterprise: {
-    priceId: 'price_1SwCSKDPO8OWHdcljhveUBiC',
-    productId: 'prod_Tu0TexPVyXQQ0O', 
-    planId: '2480be8e-2dfd-4b20-ac56-f6f7edcef024'
-  }
-}
-
-// Get Stripe price ID for a plan
-const getStripePriceId = (planId: string) => {
-  const entry = Object.values(STRIPE_PRICES).find(p => p.planId === planId)
-  return entry?.priceId
-}
+// Plans come from server/utils/plans (auto-imported as PLANS)
 
 // Profile data - watch user to refresh when authenticated
 // Profile data - watch user to refresh when authenticated
-const { data: profile, pending: profilePending, refresh: refreshProfile, error: profileError } = useLazyAsyncData(
-  () => `user-profile-${user.value?.id}`,
+// Profile data - watch user to refresh when authenticated
+// Me API Response Interface
+interface MeResponse {
+  user: any // Supabase User type is complex to import, any is safe here for checking id
+  profile: Database['public']['Tables']['profiles']['Row'] | null
+  organization: Database['public']['Tables']['organizations']['Row'] | null
+}
+
+const { data: userData, pending: userPending, refresh: refreshUserData, error: userError } = useLazyAsyncData(
+  () => `user-me-${user.value?.id}`,
   async () => {
-    console.log('[Settings] Fetching profile for user:', user.value?.id)
     if (!user.value?.id) return null
+    console.log('[Settings] Fetching /api/me for user:', user.value.id)
     try {
-      const { data, error } = await client
-        .from('profiles')
-        .select('*')
-        .eq('id', user.value.id)
-        .single()
+      const data = await $fetch<MeResponse>('/api/me')
+      console.log('[Settings] /api/me received:', data)
       
-      if (error) {
-        console.error('[Settings] Profile fetch error:', error)
-        throw error
+      // Auto-set organization cookie if missing and org exists
+      if (data.organization?.id && !selectedOrgId.value) {
+          selectedOrgId.value = data.organization.id
       }
-      console.log('[Settings] Profile data received:', data)
+      
       return data
     } catch (e) {
-      console.error('[Settings] Profile exception:', e)
+      console.error('[Settings] /api/me exception:', e)
       return null
     }
   }, { watch: [user] }
 )
 
+const profile = computed(() => userData.value?.profile)
+const profilePending = userPending
+
+// Explicit watch to ensure refresh on auth change
+watch(user, (newUser) => {
+  if (newUser?.id) {
+    console.log('[Settings] User detected, refreshing data...')
+    refreshUserData()
+    refreshOrg()
+    refreshEndpoints()
+  }
+}, { immediate: true })
+
 // Organization data with stripe_customer_id
 // Organization data with stripe_customer_id
+type OrgRow = Database['public']['Tables']['organizations']['Row']
+type PlanRow = Database['public']['Tables']['plans']['Row']
+
+interface OrgWithPlans extends OrgRow {
+  plans: PlanRow | null
+  groups: { id: string }[]
+}
+
 const { data: organization, pending: orgPending, refresh: refreshOrg } = useLazyAsyncData(
   () => `current-org-settings-${selectedOrgId.value}`,
   async () => {
@@ -69,12 +75,12 @@ const { data: organization, pending: orgPending, refresh: refreshOrg } = useLazy
     if (!selectedOrgId.value) return null
     const { data, error } = await client
       .from('organizations')
-      .select('*, plans(*)')
+      .select('*, plans(*), groups(id)')
       .eq('id', selectedOrgId.value)
       .single()
     
     if (error) console.error('[Settings] Org fetch error:', error)
-    return data
+    return (data || null) as OrgWithPlans | null
   }, { watch: [selectedOrgId] }
 )
 
@@ -99,31 +105,30 @@ const whatsappAlerts = ref(false)
 const dailySummaries = ref(true)
 
 // Fetch ALL notification endpoints (email and whatsapp)
-// Fetch ALL notification endpoints (email and whatsapp)
 const { data: notificationEndpoints, refresh: refreshEndpoints } = useLazyAsyncData(
   () => `notification-endpoints-${selectedOrgId.value}`, 
   async () => {
     console.log('[Settings] Fetching endpoints for org:', selectedOrgId.value)
-    if (!selectedOrgId.value) return []
+    if (!selectedOrgId.value) return [] as Database['public']['Tables']['notification_endpoints']['Row'][]
     const { data, error } = await client
       .from('notification_endpoints')
       .select('*')
       .eq('organization_id', selectedOrgId.value)
     
     if (error) console.error('[Settings] Endpoints fetch error:', error)
-    return data || []
+    return (data || []) as Database['public']['Tables']['notification_endpoints']['Row'][]
   }, { watch: [selectedOrgId] }
 )
 
 // Computed endpoints by type
-const emailEndpoint = computed(() => notificationEndpoints.value?.find((e: any) => e.type === 'email'))
-const whatsappEndpoint = computed(() => notificationEndpoints.value?.find((e: any) => e.type === 'whatsapp'))
+const emailEndpoint = computed(() => notificationEndpoints.value?.find(e => e.type === 'email'))
+const whatsappEndpoint = computed(() => notificationEndpoints.value?.find(e => e.type === 'whatsapp'))
 
 // Initialize notification values when data loads
 watch(notificationEndpoints, (endpoints) => {
   if (endpoints?.length) {
-    const email = endpoints.find((e: any) => e.type === 'email')
-    const whatsapp = endpoints.find((e: any) => e.type === 'whatsapp')
+    const email = endpoints.find(e => e.type === 'email')
+    const whatsapp = endpoints.find(e => e.type === 'whatsapp')
     
     if (email) {
       notificationEmail.value = email.target || ''
@@ -150,7 +155,7 @@ const updateProfile = async () => {
   const { error } = await client
     .from('profiles')
     .update({ full_name: profile.value.full_name })
-    .eq('id', user.value?.id)
+    .eq('id', user.value.id)
   
   loading.value = false
   if (error) {
@@ -252,23 +257,41 @@ const isCurrentPlan = (plan: any) => {
   return organization.value?.plans?.id === plan?.id
 }
 
+// Local checkout state
+// const checkoutLoading = ref<string | null>(null) // Duplicated above
+
+// Computed properties for limits
+const currentPlan = computed(() => {
+    // organization.plans is the joined plan object from DB, but we want the static config limits/names
+    // actually, we should trust the plan_type or plan_id in the DB
+    // The DB has `plan_type` added in migration.
+    // If organization.plan_type is set, use it.
+    const type = organization.value?.plan_type || 'starter'
+    return PLANS[type as keyof typeof PLANS] || PLANS['starter']
+})
+
+const usage = computed(() => {
+    // This would ideally come from another endpoint or be calculated from related tables
+    // For now, we mock or use what we have
+    return {
+        groups: organization.value?.groups?.length || 0, // Assuming groups relation is loaded or we fetch count
+        reports: 0
+    }
+})
+
 // Stripe checkout for upgrade
-const startCheckout = async (plan: any) => {
-  const priceId = getStripePriceId(plan.id)
-  if (!priceId) {
-    toast.add({ title: 'Plano ainda não configurado para pagamento online. Entre em contato.', color: 'orange' })
-    return
-  }
+const startCheckout = async (planSlug: string) => {
+  const plan = Object.values(PLANS).find(p => p.slug === planSlug)
+  if (!plan) return
   
-  checkoutLoading.value = plan.id
+  checkoutLoading.value = planSlug
   
   try {
-    const { url } = await $fetch<{ url: string }>('/api/stripe/create-checkout', {
+    const { url } = await $fetch<{ url: string }>('/api/stripe/checkout', {
       method: 'POST',
       body: {
-        priceId,
-        successUrl: `${window.location.origin}/settings?tab=subscription&success=true`,
-        cancelUrl: `${window.location.origin}/settings?tab=subscription`
+        priceId: plan.priceId,
+        organizationId: selectedOrgId.value
       }
     })
     
@@ -574,79 +597,52 @@ onMounted(() => {
           <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Gerencie seu plano e visualize opções de upgrade.</p>
         </header>
 
-        <div v-if="orgPending || plansPending" class="space-y-4">
+        <div v-if="orgPending" class="space-y-4">
           <USkeleton class="h-32 w-full rounded-2xl" />
           <USkeleton class="h-48 w-full rounded-2xl" />
         </div>
 
         <div v-else class="space-y-8">
-          <!-- Current Plan -->
+          <!-- Current Plan & Limits -->
           <div class="space-y-4">
-            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Plano Atual</h3>
+            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Plano Atual & Uso</h3>
             
-            <!-- Has a plan -->
-            <UCard v-if="organization?.plans" class="bg-gradient-to-br from-electric-500/10 to-transparent border-electric-500/30">
+            <UCard class="bg-gradient-to-br from-electric-500/10 to-transparent border-electric-500/30">
               <div class="flex items-start justify-between">
                 <div class="space-y-2">
-                  <UBadge color="primary" variant="solid" class="font-bold">Ativo</UBadge>
-                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ organization.plans.name }}</h3>
-                  <p class="text-gray-600 dark:text-gray-300 text-sm">{{ organization.plans.description }}</p>
-                  
-                  <div class="flex items-baseline gap-1 pt-2">
-                    <span class="text-3xl font-bold text-gray-900 dark:text-white">R$ {{ Number(organization.plans.price_monthly).toFixed(2).replace('.', ',') }}</span>
-                    <span class="text-gray-500 text-sm">/mês</span>
+                  <div class="flex items-center gap-2">
+                    <UBadge :color="organization?.subscription_status === 'active' ? 'primary' : 'orange'" variant="solid" class="font-bold">
+                        {{ organization?.subscription_status === 'active' ? 'Ativo' : (organization?.subscription_status || 'Free') }}
+                    </UBadge>
+                    <span v-if="organization?.subscription_status === 'canceled'" class="text-xs text-red-500">Cancelado</span>
                   </div>
+                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ currentPlan.name }}</h3>
+                  
+                  <!-- Limits Progress -->
+                   <div class="mt-4 space-y-3 min-w-[300px]">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium">Grupos Monitorados</span>
+                                <span>{{ usage.groups }} / {{ currentPlan.limits.max_groups }}</span>
+                            </div>
+                            <UProgress :value="usage.groups" :max="currentPlan.limits.max_groups" :color="usage.groups >= currentPlan.limits.max_groups ? 'red' : 'primary'" />
+                        </div>
+                   </div>
                 </div>
                 
                 <UIcon name="i-heroicons-check-badge" class="w-10 h-10 text-electric-500" />
               </div>
 
-              <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700/50 grid grid-cols-2 gap-4">
-                <div>
-                  <p class="text-xs text-gray-500 uppercase font-bold">Grupos</p>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">{{ organization.plans.max_groups }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-500 uppercase font-bold">Retenção</p>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">{{ organization.plans.retention_days }} dias</p>
-                </div>
-              </div>
-            </UCard>
-            
-            <!-- No plan - Free tier -->
-            <UCard v-else class="bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700">
-              <div class="flex items-start justify-between">
-                <div class="space-y-2">
-                  <UBadge color="gray" variant="soft" class="font-bold">Gratuito</UBadge>
-                  <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Plano Free</h3>
-                  <p class="text-gray-600 dark:text-gray-300 text-sm">Plano básico para começar</p>
-                  
-                  <div class="flex items-baseline gap-1 pt-2">
-                    <span class="text-3xl font-bold text-gray-900 dark:text-white">R$ 0,00</span>
-                    <span class="text-gray-500 text-sm">/mês</span>
-                  </div>
-                </div>
-                
-                <UIcon name="i-heroicons-gift" class="w-10 h-10 text-gray-400" />
-              </div>
-
-              <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700/50 grid grid-cols-2 gap-4">
-                <div>
-                  <p class="text-xs text-gray-500 uppercase font-bold">Grupos</p>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">1</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-500 uppercase font-bold">Retenção</p>
-                  <p class="text-lg font-bold text-gray-900 dark:text-white">7 dias</p>
-                </div>
-              </div>
-              
-              <div class="mt-4 p-3 rounded-lg bg-electric-500/10 border border-electric-500/20">
-                <p class="text-sm text-electric-600 dark:text-electric-400">
-                  <UIcon name="i-heroicons-arrow-up-circle" class="w-4 h-4 inline mr-1" />
-                  Faça upgrade para desbloquear mais recursos!
-                </p>
-              </div>
+               <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700/50 flex gap-6 text-sm">
+                   <div class="flex items-center gap-2">
+                       <UIcon name="i-heroicons-clock" class="text-gray-400" />
+                       <span>Retenção: <b>{{ currentPlan.limits.retention_days }} dias</b></span>
+                   </div>
+                   <div class="flex items-center gap-2">
+                       <UIcon name="i-heroicons-document-chart-bar" class="text-gray-400" />
+                       <span>Relatórios por Email: <b>{{ currentPlan.limits.has_email_reports ? 'Sim' : 'Não' }}</b></span>
+                   </div>
+               </div>
             </UCard>
           </div>
 
@@ -654,63 +650,62 @@ onMounted(() => {
           <div class="space-y-4">
             <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Planos Disponíveis</h3>
             
-            <div class="grid gap-4">
+            <div class="grid md:grid-cols-3 gap-6">
               <UCard 
-                v-for="plan in allPlans" 
-                :key="plan.id"
+                v-for="plan in Object.values(PLANS)" 
+                :key="plan.slug"
                 :class="[
-                  'transition-all',
-                  isCurrentPlan(plan) 
-                    ? 'border-electric-500/50 bg-electric-500/5' 
+                  'transition-all flex flex-col',
+                  currentPlan.slug === plan.slug
+                    ? 'border-electric-500/50 bg-electric-500/5 ring-1 ring-electric-500/50' 
                     : 'bg-white dark:bg-gray-900/40 hover:border-gray-300 dark:hover:border-gray-700'
                 ]"
               >
-                <div class="flex items-center justify-between">
-                  <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                      <h4 class="font-bold text-gray-900 dark:text-white">{{ plan.name }}</h4>
-                      <UBadge v-if="isCurrentPlan(plan)" color="primary" variant="soft" size="xs">Atual</UBadge>
+                <template #header>
+                    <div class="text-center">
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white">{{ plan.name }}</h4>
+                        <UBadge v-if="currentPlan.slug === plan.slug" color="primary" variant="soft" size="xs" class="mt-1">Atual</UBadge>
                     </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ plan.description }}</p>
-                    <div class="flex items-center gap-4 pt-1 text-xs text-gray-500">
-                      <span>{{ plan.max_groups }} grupos</span>
-                      <span>{{ plan.retention_days }} dias retenção</span>
-                    </div>
-                  </div>
-                  
-                  <div class="text-right">
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">R$ {{ Number(plan.price_monthly).toFixed(2).replace('.', ',') }}</p>
-                    <p class="text-xs text-gray-500">/mês</p>
-                    
-                    <UButton 
-                      v-if="!isCurrentPlan(plan)"
-                      :label="Number(plan.price_monthly) > (Number(organization?.plans?.price_monthly) || 0) ? 'Fazer Upgrade' : 'Mudar Plano'"
-                      :color="Number(plan.price_monthly) > (Number(organization?.plans?.price_monthly) || 0) ? 'primary' : 'gray'"
-                      size="sm"
-                      class="mt-2"
-                      :icon="checkoutLoading === plan.id ? '' : 'i-heroicons-arrow-up-circle'"
-                      :loading="checkoutLoading === plan.id"
+                </template>
+
+                <ul class="space-y-3 text-sm flex-1">
+                    <li v-for="feature in plan.features" :key="feature" class="flex items-start gap-2">
+                        <UIcon name="i-heroicons-check" class="text-green-500 w-5 h-5 shrink-0" />
+                        <span class="text-gray-600 dark:text-gray-300">{{ feature }}</span>
+                    </li>
+                     <li class="flex items-start gap-2 border-t pt-2 mt-2 dark:border-gray-800">
+                        <UIcon name="i-heroicons-user-group" class="text-gray-400 w-5 h-5 shrink-0" />
+                        <span class="text-gray-600 dark:text-gray-300">Até {{ plan.limits.max_groups }} grupos</span>
+                    </li>
+                </ul>
+                
+                <template #footer>
+                     <UButton 
+                      v-if="currentPlan.slug !== plan.slug"
+                      :label="plan.slug === 'starter' ? 'Downgrade' : 'Assinar'"
+                      :color="plan.slug === 'starter' ? 'gray' : 'primary'"
+                      block
                       :disabled="checkoutLoading !== null"
-                      @click="startCheckout(plan)"
+                      :loading="checkoutLoading === plan.slug"
+                      @click="startCheckout(plan.slug)"
                     />
-                  </div>
-                </div>
+                    <UButton
+                        v-else
+                        label="Plano Atual"
+                        color="gray"
+                        variant="ghost"
+                        block
+                        disabled
+                    />
+                </template>
               </UCard>
             </div>
           </div>
-
-          <!-- Invoices Section -->
-          <div class="space-y-4">
-            <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Faturas</h3>
-            
-            <UCard class="bg-white dark:bg-gray-900/40">
-              <div class="text-center py-8">
-                <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p class="text-gray-600 dark:text-gray-400 text-sm">Nenhuma fatura disponível ainda</p>
-                <p class="text-gray-500 dark:text-gray-500 text-xs mt-1">As faturas aparecerão aqui após o primeiro pagamento</p>
-              </div>
-            </UCard>
-          </div>
+          
+            <!-- Invoices placeholder -->
+           <div class="text-center py-8">
+             <p class="text-xs text-gray-500">O gerenciamento de faturas é feito através do portal da Stripe (em breve).</p>
+           </div>
         </div>
       </section>
 

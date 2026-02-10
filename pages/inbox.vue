@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const client = useSupabaseClient()
+import { marked } from 'marked'
+import type { Database } from '../types/database.types'
+
+const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 
 // Types for inbox items
@@ -46,6 +49,41 @@ const { data: alerts, pending: alertsPending } = useLazyAsyncData('inbox-alerts'
   return data || []
 }, { watch: [selectedOrgId] })
 
+// Demo items
+const demoItems: InboxItem[] = [
+  {
+    id: 'demo-insight',
+    type: 'insight',
+    title: 'Boas-vindas ao IgnoHub: Sua Gestão de Comunidades com IA',
+    description: 'Olá! Seja muito bem-vindo ao IgnoHub.\n\nEu sou sua Inteligência Artificial dedicada, projetada para transformar a forma como você administra seus grupos. Meu objetivo é trazer tranquilidade para você e relevância para seus membros.\n\n**O que eu faço por você 24/7:**\n\n🔹 **Resumos Inteligentes:** Chega de ler milhares de mensagens. Eu leio tudo e entrego apenas o que realmente importa, condensado e organizado.\n\n🔹 **Análise de Sentimento:** Eu monitoro o "clima" dos grupos. Se houver insatisfação ou conflitos, eu te aviso antes que vire uma crise.\n\n🔹 **Insights Estratégicos:** Identifico tendências e oportunidades de conteúdo para manter sua comunidade engajada e valiosa.\n\n🔹 **Tranquilidade na Moderação:** Detecto spam e comportamentos tóxicos automaticamente.\n\nCom o IgnoHub, você deixa de "apagar incêndios" e passa a liderar estrategicamente. Seus grupos deixam de ser apenas chats movimentados e se tornam ativos valiosos para o seu negócio.\n\nComece conectando seus grupos no menu "Comunidades" e deixe comigo o trabalho pesado!',
+    group_name: 'IgnoHub Bot',
+    group_platform: 'whatsapp',
+    created_at: new Date().toISOString(),
+    is_read: false
+  },
+  {
+    id: 'demo-summary',
+    type: 'summary',
+    title: 'Resumo Diário - Comunidade Tech',
+    description: 'Resumo das atividades de ontem:\n\n• Tópicos Principais: Discussão sobre Vue 3, dúvidas sobre Supabase e dicas de CSS.\n• Sentimento Geral: Positivo, com alta colaboração.\n• Membros Ativos: 45 mensagens de 12 usuários diferentes.\n\nNão houve incidentes reportados.',
+    group_name: 'Comunidade Tech',
+    group_platform: 'telegram',
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    is_read: false
+  },
+  {
+    id: 'demo-alert',
+    type: 'alert',
+    title: 'Alerta de Sentimento Negativo',
+    description: 'Detectamos um pico de mensagens negativas no grupo "Suporte Geral".\n\nMotivo: Usuários reclamando de lentidão no acesso.\nRecomendação: Verificar status do servidor e enviar comunicado oficial.',
+    group_name: 'Suporte Geral',
+    group_platform: 'whatsapp',
+    created_at: new Date(Date.now() - 172800000).toISOString(),
+    severity: 'high',
+    is_read: false
+  }
+]
+
 // Combined inbox items
 const inboxItems = computed<InboxItem[]>(() => {
   const items: InboxItem[] = []
@@ -78,6 +116,11 @@ const inboxItems = computed<InboxItem[]>(() => {
       is_read: a.is_read || false
     })
   })
+  
+  // If no real items, show demo items
+  if (items.length === 0 && !pending.value) {
+    return demoItems
+  }
   
   // Sort by date
   items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -157,6 +200,12 @@ const formatDate = (date: string) => {
 const selectItem = (item: InboxItem) => {
   selectedItem.value = item
 }
+
+// Computed property for parsed description
+const parsedDescription = computed(() => {
+  if (!selectedItem.value?.description) return ''
+  return marked.parse(selectedItem.value.description)
+})
 
 const pending = computed(() => summariesPending.value || alertsPending.value)
 </script>
@@ -315,19 +364,12 @@ const pending = computed(() => summariesPending.value || alertsPending.value)
           <!-- Content -->
           <UCard class="bg-white dark:bg-gray-800/50">
             <div class="prose dark:prose-invert max-w-none">
-              <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ selectedItem.description }}</p>
+              <div v-html="parsedDescription" class="text-gray-700 dark:text-gray-300"></div>
             </div>
           </UCard>
           
           <!-- Actions -->
           <div class="flex gap-3 mt-6">
-            <UButton 
-              color="primary"
-              icon="i-heroicons-arrow-right"
-              trailing
-            >
-              Ver Detalhes Completos
-            </UButton>
             <UButton 
               color="gray"
               variant="ghost"

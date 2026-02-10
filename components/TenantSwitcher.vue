@@ -1,10 +1,17 @@
 <script setup lang="ts">
-const client = useSupabaseClient()
+import type { Database } from '../types/database.types'
+
+const client = useSupabaseClient<Database>()
 const user = useSupabaseUser()
-const selectedId = useCookie('selected_organization_id')
+const selectedId = useCookie<string | null>('selected_organization_id')
 const toast = useToast()
 
-const { data: organizations, refresh: refreshOrgs } = await useAsyncData(
+interface Organization {
+  id: string
+  name: string
+}
+
+const { data: organizations, refresh: refreshOrgs } = await useAsyncData<Organization[]>(
   () => `user-organizations-${user.value?.id}`,
   async () => {
     console.log('[TenantSwitcher] Fetching orgs for user:', user.value?.id)
@@ -18,7 +25,7 @@ const { data: organizations, refresh: refreshOrgs } = await useAsyncData(
       return []
     }
     console.log('[TenantSwitcher] Orgs fetched:', data)
-    return data
+    return (data || []) as Organization[]
   }, { watch: [user] }
 )
 
@@ -26,7 +33,8 @@ const { data: organizations, refresh: refreshOrgs } = await useAsyncData(
 const autoCreating = ref(false)
 watch([organizations, user], async ([orgs, currentUser]) => {
   // Only run if user is logged in, has no orgs, and not already creating
-  if (currentUser?.id && orgs?.length === 0 && !autoCreating.value) {
+  const organizationsList = orgs as Organization[] | null
+  if (currentUser?.id && organizationsList?.length === 0 && !autoCreating.value) {
     autoCreating.value = true
     try {
       // Create default organization
@@ -36,13 +44,13 @@ watch([organizations, user], async ([orgs, currentUser]) => {
         .select()
         .single()
 
-      if (orgError) throw orgError
+      if (orgError || !newOrg) throw orgError || new Error('Failed to create organization')
 
       // Link user as admin
       const { error: userError } = await client
         .from('organization_users')
         .insert({
-          organization_id: newOrg.id,
+          organization_id: (newOrg as any).id,
           user_id: currentUser.id,
           role: 'admin'
         })
@@ -50,7 +58,7 @@ watch([organizations, user], async ([orgs, currentUser]) => {
       if (userError) throw userError
 
       // Set as selected and refresh
-      selectedId.value = newOrg.id
+      selectedId.value = (newOrg as any).id
       await refreshOrgs()
     } catch (err) {
       console.error('Failed to auto-create organization:', err)
@@ -62,26 +70,31 @@ watch([organizations, user], async ([orgs, currentUser]) => {
 
 // Auto-select first organization if none selected OR if selected is not in list
 watch(organizations, (orgs) => {
-  console.log('[TenantSwitcher] Reviewing selection. SelectedID:', selectedId.value, 'Orgs:', orgs)
-  if (orgs?.length) {
-    const isValid = orgs.find(o => o.id === selectedId.value)
+  const organizationsList = orgs as Organization[] | null
+  console.log('[TenantSwitcher] Reviewing selection. SelectedID:', selectedId.value, 'Orgs:', organizationsList)
+  if (organizationsList?.length) {
+    const isValid = organizationsList.find(o => o.id === selectedId.value)
     if (!selectedId.value || !isValid) {
-      console.log('[TenantSwitcher] Auto-selecting first valid org:', orgs[0].id)
-      selectedId.value = orgs[0].id
-      if (!isValid && selectedId.value) {
-        // If it was invalid, reload to ensure app state is consistent
-        window.location.reload()
+      console.log('[TenantSwitcher] Auto-selecting first valid org:', organizationsList[0].id)
+      selectedId.value = organizationsList[0].id
+      
+      // Force a small delay then reload if we were previously invalid to ensure app context updates
+      if (!isValid) {
+        setTimeout(() => {
+          window.location.reload()
+        }, 100)
       }
     }
   }
 }, { immediate: true })
 
 const selected = computed(() => {
-  if (!organizations.value?.length) return null
-  return organizations.value.find(org => org.id === selectedId.value) || organizations.value[0]
+  const organizationsList = organizations.value as Organization[] | null
+  if (!organizationsList?.length) return null
+  return organizationsList.find(org => org.id === selectedId.value) || organizationsList[0]
 })
 
-const selectOrg = (org: any) => {
+const selectOrg = (org: Organization) => {
   selectedId.value = org.id
   window.location.reload()
 }
@@ -102,22 +115,24 @@ const createOrganization = async () => {
       .select()
       .single()
 
-    if (orgError) throw orgError
+    if (orgError || !org) throw orgError || new Error('Failed to create organization')
 
     // 2. Vincular o usuário como Admin (RLS deve permitir se configurado corretamente, 
     // mas aqui estamos inserindo na tabela de junção)
+    if (!user.value?.id) throw new Error('User not authenticated')
+
     const { error: userError } = await client
       .from('organization_users')
       .insert({
         organization_id: org.id,
-        user_id: user.value?.id,
+        user_id: user.value.id,
         role: 'admin'
       })
 
     if (userError) throw userError
 
     toast.add({ title: 'Organização criada com sucesso!', color: 'emerald' })
-    selectedId.value = org.id
+    selectedId.value = (org as any).id
     showModal.value = false
     newOrgName.value = ''
     
@@ -132,8 +147,9 @@ const createOrganization = async () => {
 }
 
 const dropdownItems = computed(() => {
+  const organizationsList = organizations.value as Organization[] | null
   return [
-    organizations.value?.map(org => ({
+    organizationsList?.map(org => ({
       label: org.name,
       icon: 'i-heroicons-building-office',
       active: org.id === selectedId.value,
