@@ -287,7 +287,7 @@ const startCheckout = async (planSlug: string) => {
   checkoutLoading.value = planSlug
   
   try {
-    const { url } = await $fetch<{ url: string }>('/api/stripe/checkout', {
+    const { url } = await $fetch<{ url: string }>('/api/stripe/create-checkout', {
       method: 'POST',
       body: {
         planType: planSlug,
