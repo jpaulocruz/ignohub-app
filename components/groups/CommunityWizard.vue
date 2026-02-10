@@ -61,7 +61,7 @@ const { pause, resume, isActive } = useIntervalFn(async () => {
   if (verificationCheckCount.value >= maxVerificationChecks) {
     pause()
     loading.value = false
-    verificationError.value = 'O Agente não detectou a mensagem de verificação dentro do tempo limite (2 minutos). Verifique se o agente é admin do grupo e tente novamente.'
+    verificationError.value = 'Timeout: Agente não detectado. Verifique se o agente é admin do grupo e tente novamente.'
   }
 }, 3000, { immediate: false })
 
