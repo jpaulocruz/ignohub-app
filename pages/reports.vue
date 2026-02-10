@@ -23,7 +23,8 @@ onMounted(() => {
 })
 
 const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData<AnalyticsItem[]>('org-analytics', async () => {
-  if (!selectedOrgId.value) return []
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return []
   
   const { data, error } = await client
     .from('group_analytics')
@@ -38,7 +39,8 @@ const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData
 
 // Buscar insights de membros (Líderes e Detratores)
 const { data: memberInsights, pending: membersPending } = useLazyAsyncData<Insight[]>('member-insights', async () => {
-  if (!selectedOrgId.value) return []
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return []
   const { data } = await client
     .from('member_insights')
     .select('*, groups(name)')
@@ -48,7 +50,8 @@ const { data: memberInsights, pending: membersPending } = useLazyAsyncData<Insig
 }, { watch: [selectedOrgId], server: false })
 
 const { data: latestSummary, pending: summaryPending } = useLazyAsyncData<Summary | null>('latest-exec-summary', async () => {
-  if (!selectedOrgId.value) return null
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return null
   const { data } = await client
     .from('summaries')
     .select('*, groups(name)')

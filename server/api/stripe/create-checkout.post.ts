@@ -6,8 +6,13 @@ import type { Database } from '~/types/database.types'
 export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
     const body = await readBody(event)
-    const { planType, organizationId } = body
+    let { planType, organizationId } = body
     const user = await serverSupabaseUser(event)
+
+    // Sanitize organizationId from potentially corrupted cookie values
+    if (organizationId === 'undefined' || organizationId === 'null') {
+        organizationId = undefined
+    }
 
     // Secure server-side price mapping using runtimeConfig
     const PRICES = {

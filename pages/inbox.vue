@@ -32,7 +32,8 @@ const searchQuery = ref('')
 
 // Fetch inbox feed
 const { data: inboxFeed, pending: feedPending } = useLazyAsyncData('inbox-feed', async () => {
-  if (!selectedOrgId.value) return []
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return []
   const { data } = await client
     .from('inbox_feed')
     .select('*')

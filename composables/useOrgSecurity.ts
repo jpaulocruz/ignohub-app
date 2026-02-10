@@ -7,14 +7,15 @@ export const useOrgSecurity = () => {
     const isValidating = ref(false)
 
     const validateOrg = async () => {
-        if (!user.value || !selectedOrgId.value) return false
+        const orgId = selectedOrgId.value
+        if (!user.value || !orgId || orgId === 'undefined' || orgId === 'null') return false
 
         isValidating.value = true
         try {
             const { data, error } = await client
                 .from('organization_users')
                 .select('organization_id')
-                .eq('organization_id', selectedOrgId.value)
+                .eq('organization_id', orgId as string)
                 .eq('user_id', user.value.id)
                 .single()
 

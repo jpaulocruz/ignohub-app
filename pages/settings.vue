@@ -31,7 +31,8 @@ const passwordData = ref({
 // Organization & Plan Info
 const selectedOrgId = useCookie('selected_organization_id')
 const { data: organization, refresh: refreshOrg } = useLazyAsyncData('settings-org', async () => {
-  if (!selectedOrgId.value) return null
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return null
   const { data } = await supabase
     .from('organizations')
     .select('*, plans(*)')
@@ -142,11 +143,17 @@ const startCheckout = async (planType: 'starter' | 'pro') => {
   checkoutLoading.value = planType
 
   try {
+    const orgId = selectedOrgId.value
+    if (!orgId || orgId === 'undefined' || orgId === 'null') {
+      toast.add({ title: 'Organização não selecionada', color: 'red' })
+      return
+    }
+
     const { url } = await $fetch<{ url: string }>('/api/stripe/create-checkout', {
       method: 'POST',
       body: { 
         planType, 
-        organizationId: selectedOrgId.value 
+        organizationId: orgId 
       }
     })
 

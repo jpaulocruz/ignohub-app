@@ -45,8 +45,8 @@ export default defineEventHandler(async (event) => {
                 const planType = metadata?.planType
                 const subscriptionId = session.subscription as string
 
-                if (!organizationId) {
-                    console.error('[Stripe Webhook] Missing organizationId in metadata')
+                if (!organizationId || organizationId === 'undefined' || organizationId === 'null') {
+                    console.error('[Stripe Webhook] Missing or invalid organizationId in metadata')
                     break
                 }
 

@@ -24,7 +24,8 @@ type InsightItem = Pick<Database['public']['Tables']['summaries']['Row'], 'summa
 }
 
 const { data: stats, pending: statsPending } = useLazyAsyncData<DashboardStats>('dashboard-stats', async () => {
-  if (!selectedOrgId.value) return { groups: 0, messages: 0, alerts: 0 }
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return { groups: 0, messages: 0, alerts: 0 }
   
   const [groups, alerts, analyticsMsg] = await Promise.all([
     client.from('groups').select('*', { count: 'exact', head: true }).eq('organization_id', selectedOrgId.value),
@@ -43,7 +44,8 @@ const { data: stats, pending: statsPending } = useLazyAsyncData<DashboardStats>(
 }, { watch: [selectedOrgId], server: false })
 
 const { data: ranking, pending: rankingPending } = useLazyAsyncData<RankingItem[]>('dashboard-ranking', async () => {
-  if (!selectedOrgId.value) return []
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return []
   const { data } = await client
     .from('group_analytics')
     .select('*, groups(name)')
@@ -54,7 +56,8 @@ const { data: ranking, pending: rankingPending } = useLazyAsyncData<RankingItem[
 }, { watch: [selectedOrgId], server: false })
 
 const { data: insights, pending: insightsPending } = useLazyAsyncData<InsightItem[]>('dashboard-insights', async () => {
-  if (!selectedOrgId.value) return []
+  const orgId = selectedOrgId.value
+  if (!orgId || orgId === 'undefined' || orgId === 'null') return []
   const { data } = await client
     .from('summaries')
     .select('summary_text, groups(name)')
