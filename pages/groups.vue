@@ -4,6 +4,11 @@ import type { Database } from '../types/database.types'
 
 const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
+
+const { validateOrg } = useOrgSecurity()
+onMounted(() => {
+  validateOrg()
+})
 const showWizard = ref(false)
 
 const { data: groups, pending: groupsPending, refresh } = useLazyAsyncData('org-groups', async () => {

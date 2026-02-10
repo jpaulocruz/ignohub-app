@@ -5,6 +5,11 @@ import { PLANS } from '~/utils/plans'
 const user = useSupabaseUser()
 const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
+
+const { validateOrg } = useOrgSecurity()
+onMounted(() => {
+  validateOrg()
+})
 const colorMode = useColorMode()
 const toast = useToast()
 const loading = ref(false)
