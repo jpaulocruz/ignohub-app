@@ -199,6 +199,7 @@ export interface Database {
                     title: string
                     summary: string
                     severity: 'low' | 'medium' | 'high' | 'critical'
+                    status: 'open' | 'resolved' | 'dismissed'
                     created_at: string
                     is_read?: boolean
                     evidence_excerpt?: string | null
@@ -259,6 +260,7 @@ export interface Database {
                     group_id: string
                     sentiment_score: number
                     alert_count_total: number
+                    message_count: number
                     period_start: string
                     period_end: string
                     created_at?: string

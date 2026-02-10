@@ -11,7 +11,7 @@ const currentStep = ref(0)
 const loading = ref(false)
 const selectedAgent = ref<Database['public']['Tables']['agent_presets']['Row'] | null>(null)
 
-import type { Database } from '../../types/database.types'
+import type { Database } from '~/types/database.types'
 const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 
@@ -33,34 +33,74 @@ const selectAgent = (agent: any) => {
   nextStep()
 }
 
+const verificationError = ref('')
+const verificationCheckCount = ref(0)
+const maxVerificationChecks = 40 // 40 checks * 3 seconds = 120 seconds (2 minutes)
+const checkingGroupId = ref<string | null>(null)
+
+// Polling interval
+const { pause, resume, isActive } = useIntervalFn(async () => {
+  if (!checkingGroupId.value) return
+  
+  verificationCheckCount.value++
+  
+  // Check if group is active
+  const { data } = await client
+    .from('groups')
+    .select('is_active')
+    .eq('id', checkingGroupId.value)
+    .single()
+    
+  if (data?.is_active) {
+    pause()
+    loading.value = false
+    emit('success')
+  }
+  
+  // Check timeout
+  if (verificationCheckCount.value >= maxVerificationChecks) {
+    pause()
+    loading.value = false
+    verificationError.value = 'O Agente não detectou a mensagem de verificação dentro do tempo limite (2 minutos). Verifique se o agente é admin do grupo e tente novamente.'
+  }
+}, 3000, { immediate: false })
+
 const startVerification = async () => {
   currentStep.value = 2
   loading.value = true
+  verificationError.value = ''
+  verificationCheckCount.value = 0
   
-  // Simulação de verificação de webhook/bot entrando no grupo
-  setTimeout(async () => {
-    try {
-      if (!selectedOrgId.value) throw new Error('No organization selected')
+  try {
+    if (!selectedOrgId.value) throw new Error('No organization selected')
 
-      const { error } = await client.from('groups').insert({
-        organization_id: selectedOrgId.value,
-        name: 'Novo Grupo ' + (selectedAgent.value?.name || ''),
-        platform: 'WhatsApp',
-        preset_id: selectedAgent.value?.id,
-        is_active: true
-      })
-      
-      if (error) throw error
-      
-      loading.value = false
-      emit('success')
-    } catch (e) {
-      alert('Erro ao confirmar entrada do agente.')
-      loading.value = false
-      currentStep.value = 1
-    }
-  }, 3000)
+    // 1. Criar grupo como inativo (pending)
+    const { data, error } = await client.from('groups').insert({
+      organization_id: selectedOrgId.value,
+      name: 'Novo Grupo ' + (selectedAgent.value?.name || ''),
+      platform: 'WhatsApp',
+      preset_id: selectedAgent.value?.id,
+      is_active: false // Começa inativo até ser verificado
+    }).select().single()
+    
+    if (error) throw error
+    if (!data) throw new Error('Group not created')
+    
+    // 2. Iniciar polling
+    checkingGroupId.value = data.id
+    resume()
+    
+  } catch (e) {
+    console.error(e)
+    verificationError.value = 'Erro ao iniciar verificação. Tente novamente.'
+    loading.value = false
+  }
 }
+
+// Ensure cleanup
+onUnmounted(() => {
+  pause()
+})
 </script>
 
 <template>
@@ -142,16 +182,39 @@ const startVerification = async () => {
 
       <!-- Step 2: Verifying -->
       <div v-if="currentStep === 2" class="py-12 flex flex-col items-center justify-center text-center space-y-6">
-        <div class="relative scale-110">
-          <div class="absolute -inset-4 bg-electric-500/10 rounded-full blur-xl animate-pulse" />
-          <UIcon name="i-heroicons-arrow-path" class="w-16 h-16 text-electric-500 animate-spin" />
-          <div class="absolute inset-0 flex items-center justify-center">
-            <UIcon :name="selectedAgent?.icon" class="w-8 h-8 text-white opacity-80" />
+        <!-- Error State -->
+        <div v-if="verificationError" class="space-y-4">
+          <div class="relative inline-block">
+            <div class="absolute -inset-4 bg-red-500/10 rounded-full blur-xl" />
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-16 h-16 text-red-500 relative" />
           </div>
+          <div class="space-y-2 max-w-sm mx-auto">
+            <h4 class="text-lg font-bold text-white tracking-tight">Falha na Verificação</h4>
+            <p class="text-xs text-red-400 font-medium leading-relaxed">{{ verificationError }}</p>
+          </div>
+          <UButton 
+            color="gray" 
+            variant="solid" 
+            label="Tentar Novamente" 
+            icon="i-heroicons-arrow-path"
+            @click="currentStep = 1" 
+            class="mt-4"
+          />
         </div>
-        <div class="space-y-2">
-          <h4 class="text-lg font-bold text-white tracking-tight">Escaneando o Grupo...</h4>
-          <p class="text-xs text-gray-400 font-medium max-w-[280px] mx-auto leading-relaxed">Aguardando sinal do {{ selectedAgent?.name }}. Isso deve levar apenas alguns segundos após a adição.</p>
+
+        <!-- Loading State -->
+        <div v-else class="space-y-6 flex flex-col items-center">
+          <div class="relative scale-110">
+            <div class="absolute -inset-4 bg-electric-500/10 rounded-full blur-xl animate-pulse" />
+            <UIcon name="i-heroicons-arrow-path" class="w-16 h-16 text-electric-500 animate-spin" />
+            <div class="absolute inset-0 flex items-center justify-center">
+              <UIcon :name="selectedAgent?.icon" class="w-8 h-8 text-white opacity-80" />
+            </div>
+          </div>
+          <div class="space-y-2">
+            <h4 class="text-lg font-bold text-white tracking-tight">Escaneando o Grupo...</h4>
+            <p class="text-xs text-gray-400 font-medium max-w-[280px] mx-auto leading-relaxed">Aguardando sinal do {{ selectedAgent?.name }}. Isso deve levar no máximo 2 minutos após a adição.</p>
+          </div>
         </div>
       </div>
 

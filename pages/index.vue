@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Database } from '../types/database.types'
+import type { Database } from '~/types/database.types'
 
 const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
@@ -21,15 +21,18 @@ type InsightItem = Pick<Database['public']['Tables']['summaries']['Row'], 'summa
 const { data: stats, pending: statsPending } = useLazyAsyncData<DashboardStats>('dashboard-stats', async () => {
   if (!selectedOrgId.value) return { groups: 0, messages: 0, alerts: 0 }
   
-  const [groups, alerts, messages] = await Promise.all([
+  const [groups, alerts, analyticsMsg] = await Promise.all([
     client.from('groups').select('*', { count: 'exact', head: true }).eq('organization_id', selectedOrgId.value),
-    client.from('alerts').select('*', { count: 'exact', head: true }).eq('organization_id', selectedOrgId.value).eq('severity', 'critical').gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-    client.from('messages').select('*', { count: 'exact', head: true }).eq('organization_id', selectedOrgId.value).gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    client.from('alerts').select('*', { count: 'exact', head: true }).eq('organization_id', selectedOrgId.value).eq('severity', 'critical').eq('status', 'open').gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+    client.from('group_analytics').select('message_count').eq('organization_id', selectedOrgId.value)
   ])
+
+  // Sum message counts from analytics
+  const totalMessages = (analyticsMsg.data as any[])?.reduce((sum, item) => sum + (item.message_count || 0), 0) || 0
 
   return {
     groups: groups.count || 0,
-    messages: (messages.count || 0) + 1240,
+    messages: totalMessages, 
     alerts: alerts.count || 0
   }
 }, { watch: [selectedOrgId], server: false })
