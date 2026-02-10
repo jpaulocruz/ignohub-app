@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/register', '/confirm', '/forgot-password'],
+      exclude: ['/login', '/register', '/confirm', '/forgot-password', '/terms'],
     },
     cookieOptions: {
       maxAge: 60 * 60 * 8,
