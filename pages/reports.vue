@@ -17,6 +17,11 @@ type Summary = Database['public']['Tables']['summaries']['Row'] & {
 
 const selectedOrgId = useCookie('selected_organization_id')
 
+const { validateOrg } = useOrgSecurity()
+onMounted(() => {
+  validateOrg()
+})
+
 const { data: analytics, pending: analyticsPending, refresh } = useLazyAsyncData<AnalyticsItem[]>('org-analytics', async () => {
   if (!selectedOrgId.value) return []
   

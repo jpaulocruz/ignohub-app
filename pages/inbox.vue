@@ -5,6 +5,11 @@ import type { Database } from '../types/database.types'
 const client = useSupabaseClient<Database>()
 const selectedOrgId = useCookie('selected_organization_id')
 
+const { validateOrg } = useOrgSecurity()
+onMounted(() => {
+  validateOrg()
+})
+
 // Types for inbox items
 interface InboxItem {
   id: string
