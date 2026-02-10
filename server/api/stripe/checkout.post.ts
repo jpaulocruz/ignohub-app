@@ -5,8 +5,20 @@ import type { Database } from '~/types/database.types'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event)
-    const { priceId, organizationId } = body
+    const { planType, organizationId } = body
     const user = await serverSupabaseUser(event)
+
+    // Server-side price mapping
+    const PRICES = {
+        starter: process.env.STRIPE_PRICE_STARTER,
+        pro: process.env.STRIPE_PRICE_PRO
+    } as Record<string, string | undefined>
+
+    const selectedPriceId = PRICES[planType]
+
+    if (!selectedPriceId) {
+        throw createError({ statusCode: 400, message: 'Invalid plan type' })
+    }
     const client = await serverSupabaseClient<Database>(event)
     const serviceRole = await serverSupabaseServiceRole<Database>(event)
 
@@ -91,10 +103,10 @@ export default defineEventHandler(async (event) => {
                             customer: customerId,
                             mode: 'subscription',
                             payment_method_types: ['card'],
-                            line_items: [{ price: priceId, quantity: 1 }],
+                            line_items: [{ price: selectedPriceId, quantity: 1 }],
                             success_url: `${config.public.siteUrl}/settings?tab=subscription&success=true&session_id={CHECKOUT_SESSION_ID}`,
                             cancel_url: `${config.public.siteUrl}/settings?tab=subscription&canceled=true`,
-                            metadata: { organizationId, priceId }
+                            metadata: { organizationId, planType }
                         })
 
                         return { url: session.url }
@@ -109,9 +121,7 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 401, message: 'Unauthorized' })
     }
 
-    if (!priceId) {
-        throw createError({ statusCode: 400, message: 'Missing priceId' })
-    }
+
 
     // Resolve Organization ID (MVP: 1 Org per User)
     let finalOrgId = organizationId
@@ -216,7 +226,7 @@ export default defineEventHandler(async (event) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                price: priceId,
+                price: selectedPriceId,
                 quantity: 1,
             },
         ],
@@ -224,7 +234,7 @@ export default defineEventHandler(async (event) => {
         cancel_url: `${config.public.siteUrl}/settings?tab=subscription&canceled=true`,
         metadata: {
             organizationId: targetOrgId,
-            priceId: priceId
+            planType: planType
         }
     })
 
