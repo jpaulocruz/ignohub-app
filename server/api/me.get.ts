@@ -47,11 +47,20 @@ export default defineEventHandler(async (event) => {
     // Check if user is part of any organization
     const { data: orgUser } = await client
         .from('organization_users')
-        .select('organization_id, role, organizations(*)')
+        .select('organization_id, role, organizations(*, plans(*))')
         .eq('user_id', user.id)
-        .maybeSingle() // MVP: Just checking the first one if it exists
+        .maybeSingle()
 
-    let organization = orgUser?.organizations
+    let organization: any = null
+
+    if (orgUser?.organizations) {
+        // Enriched organization object
+        organization = {
+            ...orgUser.organizations,
+            role: orgUser.role,
+            is_main: true
+        }
+    }
 
     if (!organization) {
         // Create Default Organization
@@ -70,7 +79,6 @@ export default defineEventHandler(async (event) => {
 
         if (orgError || !newOrg) {
             console.error('[API/me] Failed to create organization:', orgError)
-            // Can't proceed with org logic if creation failed
         } else {
             // Link User as Admin
             const { error: linkError } = await client
@@ -84,7 +92,11 @@ export default defineEventHandler(async (event) => {
             if (linkError) {
                 console.error('[API/me] Failed to link organization:', linkError)
             } else {
-                organization = newOrg
+                organization = {
+                    ...newOrg,
+                    role: 'admin',
+                    is_main: true
+                }
             }
         }
     }
