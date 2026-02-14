@@ -18,6 +18,7 @@ export interface Database {
                     stripe_customer_id?: string | null
                     stripe_subscription_id?: string | null
                     plan_type?: string | null
+                    trial_ends_at?: string | null
                 }
                 Insert: {
                     id?: string
@@ -27,6 +28,7 @@ export interface Database {
                     stripe_customer_id?: string | null
                     stripe_subscription_id?: string | null
                     plan_type?: string | null
+                    trial_ends_at?: string | null
                 }
                 Update: {
                     id?: string
@@ -36,6 +38,7 @@ export interface Database {
                     stripe_customer_id?: string | null
                     stripe_subscription_id?: string | null
                     plan_type?: string | null
+                    trial_ends_at?: string | null
                 }
             }
             organization_users: {
@@ -231,26 +234,88 @@ export interface Database {
                 Row: {
                     id: string
                     organization_id: string
-                    group_id?: string | null
-                    content: string
-                    author: string
+                    group_id: string
+                    content_text: string
+                    author_hash: string
+                    message_ts: string
+                    batch_id: string | null
                     created_at: string
                 }
                 Insert: {
                     id?: string
                     organization_id: string
-                    group_id?: string | null
-                    content: string
-                    author: string
+                    group_id: string
+                    content_text: string
+                    author_hash: string
+                    message_ts: string
+                    batch_id?: string | null
                     created_at?: string
                 }
                 Update: {
                     id?: string
                     organization_id?: string
-                    group_id?: string | null
-                    content?: string
-                    author?: string
+                    group_id?: string
+                    content_text?: string
+                    author_hash?: string
+                    message_ts?: string
+                    batch_id?: string | null
                     created_at?: string
+                }
+            }
+            message_batches: {
+                Row: {
+                    id: string
+                    group_id: string
+                    organization_id: string
+                    start_ts: string
+                    end_ts: string
+                    message_count: number
+                    author_count: number
+                    priority: string
+                    high_signal_flags: Json | null
+                    excerpt: string | null
+                    status: string
+                    locked_by: string | null
+                    locked_at: string | null
+                    error: string | null
+                    created_at: string
+                    processed_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    group_id: string
+                    organization_id: string
+                    start_ts: string
+                    end_ts: string
+                    message_count: number
+                    author_count: number
+                    priority: string
+                    high_signal_flags?: Json | null
+                    excerpt?: string | null
+                    status: string
+                    locked_by?: string | null
+                    locked_at?: string | null
+                    error?: string | null
+                    created_at?: string
+                    processed_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    group_id?: string
+                    organization_id?: string
+                    start_ts?: string
+                    end_ts?: string
+                    message_count?: number
+                    author_count?: number
+                    priority?: string
+                    high_signal_flags?: Json | null
+                    excerpt?: string | null
+                    status?: string
+                    locked_by?: string | null
+                    locked_at?: string | null
+                    error?: string | null
+                    created_at?: string
+                    processed_at?: string | null
                 }
             }
             group_analytics: {

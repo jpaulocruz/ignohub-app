@@ -1,17 +1,66 @@
 @import "tailwindcss";
 
 @theme {
+  /* Typography */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #3337f5;
-  --color-primary-hover: #292cc2;
-  --color-primary-foreground: #ffffff;
+
+  /* Primary Colors - Horizon UI Style (Vibrant Blue/Cyan) */
+  --color-brand-100: #e9e3ff;
+  --color-brand-200: #b0a1ff;
+  --color-brand-300: #7551ff;
+  --color-brand-400: #5d27ff;
+  --color-brand-500: #4318ff;
+  /* Primary Brand Blue */
+  --color-brand-600: #3211d0;
+  --color-brand-700: #2509a2;
+  --color-brand-800: #190793;
+  --color-brand-900: #11047a;
+
+  /* Neutrals & Navy (Dark Mode Foundations) */
+  --color-navy-50: #d0dcfb;
+  --color-navy-100: #aac0fe;
+  --color-navy-200: #a3b9f8;
+  --color-navy-300: #728fea;
+  --color-navy-400: #3652ba;
+  --color-navy-500: #1b3bbb;
+  --color-navy-600: #24388a;
+  --color-navy-700: #1b254b;
+  --color-navy-800: #111c44;
+  /* Card Background */
+  --color-navy-900: #0b1437;
+  /* Body Background */
+
+  --color-secondary-gray-100: #e0e5f2;
+  --color-secondary-gray-200: #e1e9f8;
+  --color-secondary-gray-300: #f4f7fe;
+  --color-secondary-gray-400: #e9edf7;
+  --color-secondary-gray-500: #8f9bba;
+  --color-secondary-gray-600: #a3aed0;
+  /* Muted Text */
+  --color-secondary-gray-700: #707eae;
+  --color-secondary-gray-800: #4a5568;
+  --color-secondary-gray-900: #1b2559;
+
+  /* Semantic Overrides */
+  --color-primary: var(--color-brand-500);
+  --color-primary-hover: var(--color-brand-600);
+
+  /* Radii */
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-premium: 30px;
+
+  /* Shadows - Horizon UI Premium Elevation */
+  --shadow-premium: 0px 18px 40px rgba(112, 144, 176, 0.12);
+  --shadow-navbar: 10px 10px 20px rgba(112, 144, 176, 0.08);
 }
 
 @layer base {
   :root {
     color-scheme: dark;
-    --background: #09090b;
-    --foreground: #fafafa;
+    --background: var(--color-navy-900);
+    --foreground: #ffffff;
   }
 
   body {
@@ -20,11 +69,29 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.5px;
   }
 
   /* Custom selection color */
   ::selection {
-    background-color: var(--color-primary);
-    color: var(--color-primary-foreground);
+    background-color: var(--color-brand-300);
+    color: #ffffff;
+  }
+}
+
+@layer components {
+
+  /* Premium Blur Effect for Navbar */
+  .glass-card {
+    background: rgba(17, 28, 68, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .premium-card {
+    background-color: var(--color-navy-800);
+    border-radius: var(--radius-3xl);
+    box-shadow: var(--shadow-premium);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 }
