@@ -42,7 +42,7 @@ export default async function PlanConfigurationPage() {
                     <div className="grid grid-cols-1 gap-8">
                         {plans.map((plan) => (
                             <PremiumCard key={plan.id} className="p-8 border-l-4 border-l-brand-500">
-                                <PlanForm plan={plan} />
+                                <PlanForm plan={plan as any} />
                             </PremiumCard>
                         ))}
                     </div>

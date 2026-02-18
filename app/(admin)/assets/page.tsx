@@ -1030,24 +1030,13 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
                 </PremiumCard>
             ))}
 
-            {/* Agent Presets with bot_link */}
-            {presets.filter((p) => p.bot_link || p.telegram_bot_username).length > 0 && (
-                <div className="space-y-3">
-                    <h3 className="text-sm font-black text-secondary-gray-400 uppercase tracking-widest">Presets com Bot Link</h3>
-                    {presets.filter((p) => p.bot_link || p.telegram_bot_username).map((preset) => (
-                        <PremiumCard key={preset.id} className="p-4 border-l-4 border-l-blue-500/50">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-bold text-white">{preset.name}</p>
-                                    {preset.bot_link && <p className="text-xs text-blue-400 font-mono mt-0.5">{preset.bot_link}</p>}
-                                    {preset.telegram_bot_username && <p className="text-xs text-secondary-gray-500 mt-0.5">@{preset.telegram_bot_username}</p>}
-                                </div>
-                                <StatusBadge active={preset.is_active} />
-                            </div>
-                        </PremiumCard>
-                    ))}
-                </div>
-            )}
+            {/* Agent Presets with Edit Option */}
+            <div className="space-y-3">
+                <h3 className="text-sm font-black text-secondary-gray-400 uppercase tracking-widest">Presets do Sistema</h3>
+                {presets.map((preset) => (
+                    <PresetCard key={preset.id} preset={preset} onRefresh={onRefresh} />
+                ))}
+            </div>
 
             {/* New Telegram Bot */}
             {showNewBot ? (
@@ -1080,7 +1069,104 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
     );
 }
 
-// ─── Tab 4: Monitor IA ───
+function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void }) {
+    const [editing, setEditing] = useState(false);
+    const [form, setForm] = useState({
+        bot_link: preset.bot_link || "",
+        telegram_bot_username: preset.telegram_bot_username || "",
+        whatsapp_support_number: preset.whatsapp_support_number || "",
+    });
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await saveAgentPreset({
+                id: preset.id,
+                ...form
+            });
+            setEditing(false);
+            onRefresh();
+        } catch (e) {
+            console.error(e);
+            alert("Erro ao salvar preset");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <PremiumCard className="p-4 border-l-4 border-l-blue-500/50">
+            {editing ? (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-white">{preset.name}</h4>
+                        <button onClick={() => setEditing(false)} className="p-1 hover:bg-white/10 rounded">
+                            <X className="h-4 w-4 text-secondary-gray-400" />
+                        </button>
+                    </div>
+
+                    <InputField
+                        label="Bot Link (t.me/...)"
+                        value={form.bot_link}
+                        onChange={(v) => setForm({ ...form, bot_link: v })}
+                        placeholder="https://t.me/SeuBot"
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <InputField
+                            label="Username (@bot)"
+                            value={form.telegram_bot_username}
+                            onChange={(v) => setForm({ ...form, telegram_bot_username: v })}
+                            placeholder="SeuBot"
+                        />
+                        <InputField
+                            label="WhatsApp Support"
+                            value={form.whatsapp_support_number}
+                            onChange={(v) => setForm({ ...form, whatsapp_support_number: v })}
+                            placeholder="5511999999999"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                        >
+                            {saving ? "Salvando..." : "Salvar Alterações"}
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-white">{preset.name}</p>
+                            <button onClick={() => setEditing(true)} className="p-1 hover:bg-white/10 rounded cursor-pointer text-secondary-gray-500 hover:text-white transition-colors">
+                                <Settings className="h-3 w-3" />
+                            </button>
+                        </div>
+                        {preset.bot_link ? (
+                            <a href={preset.bot_link} target="_blank" rel="noreferrer" className="text-xs text-blue-400 font-mono mt-0.5 hover:underline block">
+                                {preset.bot_link}
+                            </a>
+                        ) : (
+                            <p className="text-[10px] text-orange-400 mt-0.5">Sem link configurado</p>
+                        )}
+                        {preset.telegram_bot_username && <p className="text-xs text-secondary-gray-500 mt-0.5">@{preset.telegram_bot_username}</p>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="text-right hidden sm:block">
+                            <p className="text-[10px] text-secondary-gray-500 uppercase tracking-widest">Preserve Context</p>
+                            <p className="text-xs font-bold text-white">{preset.preserve_context ? "Sim" : "Não"}</p>
+                        </div>
+                        <StatusBadge active={preset.is_active} />
+                    </div>
+                </div>
+            )}
+        </PremiumCard>
+    );
+}
 
 function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings: Record<string, string>; onRefresh: () => void }) {
     const maxTokens = Math.max(...usage.map((u) => u.tokens), 1);
@@ -1523,6 +1609,13 @@ const PROMPT_DEFINITIONS = [
         description: "Prompt para extrair comportamento dos membros.",
         placeholder: "Identifique padrões de comportamento... (Defina foco psicológico aqui)",
         icon: <Lightbulb className="h-5 w-5 text-cyan-500" />
+    },
+    {
+        id: "TELEGRAM_BOT_LINK",
+        label: "Link do Bot Telegram",
+        description: "Link global do bot usado no onboarding (ex: t.me/ignohub_bot).",
+        placeholder: "t.me/seu_bot",
+        icon: <Send className="h-5 w-5 text-blue-500" />
     }
 ];
 

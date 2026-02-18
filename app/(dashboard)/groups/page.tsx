@@ -62,10 +62,10 @@ export default function GroupsPage() {
         const presetIds = groupsData.map(g => g.preset_id).filter(Boolean);
         const groupIds = groupsData.map(g => g.id);
 
-        const [presetsRes, agentsRes] = await Promise.all([
-            presetIds.length > 0 ? supabase.from("agent_presets").select("id, name, icon").in("id", presetIds) : Promise.resolve({ data: [] }),
-            groupIds.length > 0 ? supabase.from("group_agents").select("group_id, status").in("group_id", groupIds) : Promise.resolve({ data: [] })
-        ]);
+        const presetsQuery = presetIds.length > 0 ? supabase.from("agent_presets").select("id, name, icon").in("id", presetIds) : Promise.resolve({ data: [] as any[], error: null });
+        const agentsQuery = groupIds.length > 0 ? supabase.from("group_agents").select("group_id, status").in("group_id", groupIds) : Promise.resolve({ data: [] as any[], error: null });
+
+        const [presetsRes, agentsRes] = await Promise.all([presetsQuery, agentsQuery]);
 
         // 3. Merge Data
         const merged = groupsData.map(group => {

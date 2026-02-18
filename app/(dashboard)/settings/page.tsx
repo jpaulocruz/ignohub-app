@@ -79,22 +79,25 @@ export default function SettingsPage() {
                     .single();
 
                 if (profileData) {
-                    setProfile(profileData);
-                    setFullName(profileData.full_name || "");
-                    setJobTitle(profileData.job_title || "");
-                    setPhone(profileData.phone || "");
-                    setBio(profileData.bio || "");
-                    setAvatarUrl(profileData.avatar_url || "");
+                    const p = profileData as any;
+                    setProfile(p);
+                    setFullName(p.full_name || "");
+                    setJobTitle(p.job_title || "");
+                    setPhone(p.phone || "");
+                    setBio(p.bio || "");
+                    setAvatarUrl(p.avatar_url || "");
                 }
 
                 if (organization) {
-                    setOrgName(organization.name || "");
-                    if (organization.summary_schedule_time) setSummaryTime(organization.summary_schedule_time);
-                    if (organization.summary_delivery_days) {
-                        setSummaryDays(normalizeDays(organization.summary_delivery_days));
+                    const org = organization as any;
+                    setOrgName(org.name || "");
+                    if (org.summary_schedule_time) setSummaryTime(org.summary_schedule_time);
+                    if (org.summary_delivery_days) {
+                        setSummaryDays(normalizeDays(org.summary_delivery_days));
                     }
-                    if (organization.alert_instructions) setAlertInstructions(organization.alert_instructions);
+                    if (org.alert_instructions) setAlertInstructions(org.alert_instructions);
                 }
+
 
                 const { data: settings } = await supabase
                     .from("user_settings")

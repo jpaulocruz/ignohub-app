@@ -288,41 +288,78 @@ function StepInstruction({
                             </div>
                         </div>
                     ) : (
-                        <div className="p-5 rounded-2xl bg-navy-950 border border-sky-500/10 space-y-4">
-                            <div className="flex items-start gap-3">
-                                <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="p-6 rounded-2xl bg-navy-950 border border-sky-500/10 space-y-5">
+                            {/* Step 1: Open Bot */}
+                            <div className="flex items-start gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
                                     <span className="text-sm font-black text-sky-500">1</span>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-white font-semibold">
-                                        Clique para abrir o Bot:
+                                <div className="flex-1 space-y-1">
+                                    <p className="text-sm text-white font-black uppercase tracking-tight">
+                                        Iniciar Bot
+                                    </p>
+                                    <p className="text-xs text-secondary-gray-500 leading-relaxed italic">
+                                        Clique no botão abaixo para abrir o bot oficial do Agno no seu Telegram.
                                     </p>
                                     {botLink ? (
-                                        <a
-                                            href={botLink.startsWith("http") ? botLink : `https://${botLink}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-lg text-sky-400 text-sm font-bold hover:bg-sky-500/20 transition-colors"
-                                        >
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                            {botLink}
-                                        </a>
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <a
+                                                href={botLink.startsWith("http") ? botLink : `https://${botLink}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20"
+                                            >
+                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                Conversar com Agno
+                                            </a>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(botLink);
+                                                    setCopied(true);
+                                                    setTimeout(() => setCopied(false), 2000);
+                                                }}
+                                                className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-secondary-gray-400 hover:text-white transition-all cursor-pointer"
+                                                title="Copiar Link"
+                                            >
+                                                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                                            </button>
+                                        </div>
                                     ) : (
-                                        <p className="text-sm text-secondary-gray-500 mt-1">
-                                            Nenhum bot configurado.
+                                        <p className="text-xs text-amber-500 font-bold flex items-center gap-1 mt-2">
+                                            <Zap className="h-3.5 w-3.5" /> Link do bot pendente de configuração global.
                                         </p>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-3">
-                                <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                            {/* Step 2: Add to Group */}
+                            <div className="flex items-start gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
                                     <span className="text-sm font-black text-sky-500">2</span>
                                 </div>
-                                <p className="text-sm text-white font-semibold">
-                                    Adicione-o ao seu grupo como{" "}
-                                    <span className="text-sky-400">Admin</span>.
-                                </p>
+                                <div className="flex-1 space-y-1">
+                                    <p className="text-sm text-white font-black uppercase tracking-tight">
+                                        Adicionar ao Grupo
+                                    </p>
+                                    <p className="text-xs text-secondary-gray-500 leading-relaxed">
+                                        No perfil do bot, use a opção <span className="text-sky-400 font-bold">"Adicionar ao Grupo"</span> e selecione a comunidade que deseja monitorar.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Step 3: Make Admin */}
+                            <div className="flex items-start gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
+                                    <span className="text-sm font-black text-sky-500">3</span>
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <p className="text-sm text-white font-black uppercase tracking-tight">
+                                        Promover a Admin
+                                    </p>
+                                    <p className="text-xs text-secondary-gray-500 leading-relaxed">
+                                        Dentro do grupo, torne o Agno <span className="text-sky-400 font-bold">Administrador</span>. Isso é necessário para que a IA processe as mensagens e gere seus resumos.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     )}

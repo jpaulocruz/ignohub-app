@@ -611,7 +611,7 @@ export async function getTokenUsageStats() {
 export async function getAISettings() {
     const supabase = createAdminClient();
     const apiKeyFields = ["GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GROQ_API_KEY", "LOVABLE_API_KEY"];
-    const promptFields = ["PROMPT_SUMMARY_SYSTEM"];
+    const promptFields = ["PROMPT_SUMMARY_SYSTEM", "TELEGRAM_BOT_LINK"];
     const allKeys = [...apiKeyFields, ...promptFields];
 
     const { data, error } = await supabase

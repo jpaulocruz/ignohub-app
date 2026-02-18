@@ -48,7 +48,7 @@ export async function POST(req: Request) {
             supabase.from('organization_users').select('user_id').eq('organization_id', batch.organization_id)
         ])
 
-        const group = groupResult.data
+        const group = groupResult.data as any
         const messages = messagesResult.data
         const openaiApiKey = aiKeySettingResult.data?.value
         const orgUsers = orgUsersResult.data

@@ -875,6 +875,8 @@ export type Database = {
           id: string
           notification_email: string | null
           notification_whatsapp: string | null
+          email_summary_enabled: boolean | null
+          min_messages_for_summary: number | null
           summary_frequency: string | null
           updated_at: string
           user_id: string
@@ -886,6 +888,8 @@ export type Database = {
           id?: string
           notification_email?: string | null
           notification_whatsapp?: string | null
+          email_summary_enabled?: boolean | null
+          min_messages_for_summary?: number | null
           summary_frequency?: string | null
           updated_at?: string
           user_id: string
@@ -897,6 +901,8 @@ export type Database = {
           id?: string
           notification_email?: string | null
           notification_whatsapp?: string | null
+          email_summary_enabled?: boolean | null
+          min_messages_for_summary?: number | null
           summary_frequency?: string | null
           updated_at?: string
           user_id?: string

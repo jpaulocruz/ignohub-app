@@ -10,18 +10,27 @@ export async function getOnboardingData() {
         .from("admin_collection_instances")
         .select("id, instance_name")
         .eq("is_active", true)
-        .eq("provider", "whatsapp")
+        .eq("provider", "evolution")
         .limit(1)
         .maybeSingle();
 
-    const { data: preset } = await supabase
-        .from("agent_presets")
-        .select("bot_link")
-        .eq("is_active", true)
-        .ilike("name", "Sentinel")
+    const { data: globalLink } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "TELEGRAM_BOT_LINK")
         .maybeSingle();
 
-    let botLink = preset?.bot_link;
+    let botLink = globalLink?.value;
+
+    if (!botLink) {
+        const { data: preset } = await supabase
+            .from("agent_presets")
+            .select("bot_link")
+            .eq("is_active", true)
+            .ilike("name", "Sentinel")
+            .maybeSingle();
+        botLink = preset?.bot_link;
+    }
 
     if (!botLink) {
         const { data: anyPreset } = await supabase
