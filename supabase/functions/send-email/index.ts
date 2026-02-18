@@ -64,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`[send-email] Sending ${emailType} email to ${to}`);
 
         const brevoPayload: BrevoEmailPayload = {
-            sender: { name: "ZapDigest", email: "contato@webyou.com.br" },
+            sender: { name: "IgnoHub", email: "contato@webyou.com.br" },
             to: [{ email: to }],
         };
 

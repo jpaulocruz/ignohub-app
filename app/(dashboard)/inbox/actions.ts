@@ -1,13 +1,13 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function getUnifiedInbox(organizationId: string) {
-    const supabase = createClient() as any
+export async function getUnifiedInbox(organizationId: string, view: 'active' | 'archived' = 'active') {
+    const supabase = await createClient() as any
 
     // Fetch Alerts
-    const { data: alerts } = await supabase
+    let alertsQuery = supabase
         .from('alerts')
         .select(`
             id,
@@ -20,43 +20,31 @@ export async function getUnifiedInbox(organizationId: string) {
             groups(name)
         `)
         .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
 
-    // Fetch Summaries
-    const { data: summaries } = await supabase
-        .from('summaries')
-        .select(`
-            id,
-            summary_text,
-            highlights,
-            is_read,
-            created_at,
-            groups(name)
-        `)
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
+    if (view === 'active') {
+        alertsQuery = alertsQuery.neq('status', 'archived')
+    } else {
+        alertsQuery = alertsQuery.eq('status', 'archived')
+    }
 
-    // Fetch Insights
-    const { data: insights } = await supabase
-        .from('member_insights')
-        .select(`
-            id,
-            role,
-            insight_text,
-            author_hash,
-            is_read,
-            created_at,
-            groups(name)
-        `)
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
+    // Execute queries in parallel
+    const [alertsResult, summariesResult, insightsResult] = await Promise.all([
+        alertsQuery.order('created_at', { ascending: false }),
+        summariesQuery.order('created_at', { ascending: false }),
+        insightsQuery.order('created_at', { ascending: false })
+    ])
+
+    const alerts = alertsResult.data
+    const summaries = summariesResult.data
+    const insights = insightsResult.data
 
     // Unify and Sort
     const unified = [
         ...(alerts || []).map((a: any) => ({
             ...a,
             source: 'alert',
-            is_read: a.status !== 'open',
+            is_read: a.status !== 'open', // Open = Unread, Resolved = Read
+            is_resolved: a.status === 'resolved',
             group_name: a.groups?.name
         })),
         ...(summaries || []).map((s: any) => ({
@@ -64,6 +52,7 @@ export async function getUnifiedInbox(organizationId: string) {
             source: 'summary',
             title: 'Resumo de Inteligência',
             summary: s.summary_text,
+            is_resolved: s.is_read, // Treat read as resolved for consistency
             group_name: s.groups?.name
         })),
         ...(insights || []).map((i: any) => ({
@@ -71,6 +60,7 @@ export async function getUnifiedInbox(organizationId: string) {
             source: 'insight',
             title: `Insight: ${i.role || 'Membro'}`,
             summary: i.insight_text,
+            is_resolved: i.is_read, // Treat read as resolved for consistency
             group_name: i.groups?.name
         }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -79,7 +69,7 @@ export async function getUnifiedInbox(organizationId: string) {
 }
 
 export async function markAsReadAction(id: string, source: 'alert' | 'summary' | 'insight') {
-    const supabase = createClient() as any
+    const supabase = await createClient() as any
 
     if (source === 'alert') {
         await supabase.from('alerts').update({ status: 'resolved' }).eq('id', id)
@@ -91,16 +81,13 @@ export async function markAsReadAction(id: string, source: 'alert' | 'summary' |
 }
 
 export async function archiveItemAction(id: string, source: 'alert' | 'summary' | 'insight') {
-    const supabase = createClient() as any
-    // In a real app, we might have an is_archived column. 
-    // For now, let's treat 'resolved' or 'read' as archived for the sake of the demo
-    // or we can add the column if it were crucial. 
-    // Given the prompt, I'll just reuse the markAsRead logic or update a specific status.
+    const supabase = await createClient() as any
+
     if (source === 'alert') {
         await supabase.from('alerts').update({ status: 'archived' }).eq('id', id)
     } else if (source === 'summary') {
-        await supabase.from('summaries').update({ is_read: true }).eq('id', id)
+        await supabase.from('summaries').update({ is_archived: true }).eq('id', id)
     } else if (source === 'insight') {
-        await supabase.from('member_insights').update({ is_read: true }).eq('id', id)
+        await supabase.from('member_insights').update({ is_archived: true }).eq('id', id)
     }
 }

@@ -86,7 +86,9 @@ serve(async (req) => {
 
         const { force } = await req.json().catch(() => ({})) as { force?: boolean };
 
-        const matchingUsers = usersToProcess.filter(user => {
+        // ... (Matching Users Logic - no change)
+        const matchingUsers: any[] = usersToProcess.filter((user: any) => {
+            // ... Logic remains the same ...
             if (force) return true;
             const scheduledTime = user.auto_generate_time?.slice(0, 5) || '09:00';
             const [schH, schM] = scheduledTime.split(':').map(Number);
@@ -107,26 +109,14 @@ serve(async (req) => {
             return false;
         });
 
-        const results = [];
-        for (const uSettings of matchingUsers) {
-            const userId = uSettings.user_id;
-            await supabase.from('user_settings').update({ last_auto_generate_at: currentDateStr }).eq('user_id', userId);
+        // PARALLEL PROCESSING
+        const processGroup = async (group: any, uSettings: any, plan: any) => {
+            try {
+                const cutoff = new Date(Date.now() - 86400000).toISOString();
+                const { data: messages } = await supabase.from('messages').select('sender_name, content').eq('group_id', group.id).gte('message_ts', cutoff).order('message_ts', { ascending: true });
+                if (!messages || messages.length < (uSettings.min_messages_for_summary ?? 10)) return null;
 
-            const { data: profile } = await supabase.from('profiles').select('plan_id').eq('user_id', userId).maybeSingle();
-            const { data: plan } = profile?.plan_id ? await supabase.from('plans').select('*').eq('id', profile.plan_id).single() : { data: null };
-
-            const { data: instances } = await supabase.from('instances').select('id, name').eq('user_id', userId).eq('status', 'connected');
-            if (!instances?.length) continue;
-
-            const { data: groups } = await supabase.from('groups').select('id, jid, name').eq('is_active', true).in('instance_id', instances.map(i => i.id));
-            if (!groups?.length) continue;
-
-            const cutoff = new Date(Date.now() - 86400000).toISOString();
-            for (const group of groups) {
-                const { data: messages } = await supabase.from('messages').select('sender_name, content').eq('group_id', group.id).gte('received_at', cutoff).order('received_at', { ascending: true });
-                if (!messages || messages.length < (uSettings.min_messages_for_summary ?? 10)) continue;
-
-                const transcript = messages.map(m => `${m.sender_name}: ${m.content}`).join('\n');
+                const transcript = messages.map((m: any) => `${m.sender_name}: ${m.content}`).join('\n');
                 const prompt = `${(uSettings.custom_prompt || DEFAULT_PROMPT).replace(/\{grupo\}/g, group.name)}\n\nTranscrições:\n${transcript}`;
 
                 let aiEndpoint = 'https://ai.gateway.lovable.dev/v1/chat/completions';
@@ -141,28 +131,66 @@ serve(async (req) => {
                     body: JSON.stringify({ model, messages: [{ role: 'system', content: 'Assistente de resumos.' }, { role: 'user', content: prompt }], temperature: 0.3 }),
                 });
 
-                if (!aiRes.ok) continue;
+                if (!aiRes.ok) return null;
                 const aiData = await aiRes.json();
                 const summary = aiData.choices?.[0]?.message?.content;
-                if (!summary) continue;
+                if (!summary) return null;
 
+                // Persistence
                 await supabase.from('summaries').insert({ group_id: group.id, summary_content: summary });
-                await supabase.from('ai_token_usage').insert({ user_id: userId, model: aiData.model || aiModel, request_type: 'auto-generate', tokens_used: aiData.usage?.total_tokens || 0 });
 
+                // Track Usage (Fire & Forget)
+                supabase.from('ai_token_usage').insert({ user_id: uSettings.user_id, model: aiData.model || aiModel, request_type: 'auto-generate', tokens_used: aiData.usage?.total_tokens || 0 }).then();
+
+                // Queue Email
                 if (uSettings.email_summary_enabled) {
                     let email = uSettings.notification_email;
-                    if (!email) { const { data } = await supabase.auth.admin.getUserById(userId); email = data?.user?.email; }
+                    // We can optimize this by fetching email ONLY if missing, or passing it down
+                    if (!email) { const { data } = await supabase.auth.admin.getUserById(uSettings.user_id); email = data?.user?.email; }
+
                     if (email) {
-                        await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ to: email, subject: `Resumo Automático: ${group.name}`, htmlContent: `<h2>${group.name}</h2><pre>${summary}</pre>`, userId, emailType: 'auto_summary' }),
+                        await supabase.from('delivery_queue').insert({
+                            type: 'email',
+                            payload: {
+                                to: email,
+                                subject: `Resumo Automático: ${group.name}`,
+                                htmlContent: `<h2>${group.name}</h2><pre>${summary}</pre>`,
+                                userId: uSettings.user_id,
+                                emailType: 'auto_summary'
+                            },
+                            status: 'pending'
                         });
                     }
                 }
-                results.push({ group: group.name, success: true });
+                return { group: group.name, success: true };
+            } catch (e) {
+                console.error(`Error processing group ${group.id}:`, e);
+                return { group: group.name, success: false, error: e };
             }
-        }
+        };
+
+        const processUser = async (uSettings: any) => {
+            const userId = uSettings.user_id;
+            await supabase.from('user_settings').update({ last_auto_generate_at: currentDateStr }).eq('user_id', userId);
+
+            const { data: profile } = await supabase.from('profiles').select('plan_id').eq('user_id', userId).maybeSingle();
+            const { data: plan } = profile?.plan_id ? await supabase.from('plans').select('*').eq('id', profile.plan_id).single() : { data: null };
+
+            const { data: instances } = await supabase.from('instances').select('id, name').eq('user_id', userId).eq('status', 'connected');
+            if (!instances?.length) return [];
+
+            const { data: groups } = await supabase.from('groups').select('id, jid, name').eq('is_active', true).in('instance_id', instances.map((i: any) => i.id));
+            if (!groups?.length) return [];
+
+            // Process groups in parallel
+            const groupResults = await Promise.all(groups.map((g: any) => processGroup(g, uSettings, plan)));
+            return groupResults.filter(Boolean);
+        };
+
+        // Execute all users in parallel
+        const resultsNested = await Promise.all(matchingUsers.map(processUser));
+        const results = resultsNested.flat();
+
         return new Response(JSON.stringify({ results }), { headers: corsHeaders });
     } catch (error: any) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });

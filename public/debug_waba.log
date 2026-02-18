@@ -1,0 +1,8 @@
+[2026-02-17T21:02:15.601Z] Org Users: 1, Settings Found: 1
+[2026-02-17T21:02:15.602Z] High Sev Alerts: 2
+[2026-02-17T21:02:15.602Z] Processing User: b83caf99-799d-4110-ac1d-e97703275a64 | IsTest: true | WA Enabled: true
+[2026-02-17T21:02:15.812Z] [DELIVERY] Failed to queue items: Could not find the table 'public.delivery_queue' in the schema cache
+[2026-02-17T21:24:49.239Z] Org Users: 1, Settings Found: 1
+[2026-02-17T21:24:49.241Z] High Sev Alerts: 2
+[2026-02-17T21:24:49.245Z] Processing User: b83caf99-799d-4110-ac1d-e97703275a64 | IsTest: true | WA Enabled: true
+[2026-02-17T21:24:49.428Z] [DELIVERY] Queued 7 items. Processing immediately...

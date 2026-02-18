@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/database.types'
 
+const ADMIN_ROUTES = ['/monitoring', '/plans', '/assets']
+
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
         request: {
@@ -36,11 +38,36 @@ export async function middleware(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // Protect routes starting with /dashboard
-    if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    const pathname = request.nextUrl.pathname
+
+    // Protect dashboard routes
+    if (!user && pathname.startsWith('/dashboard')) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
+    }
+
+    // Triple Protection: Admin route guard
+    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
+
+    if (isAdminRoute) {
+        if (!user) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            return NextResponse.redirect(url)
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_superadmin')
+            .eq('id', user.id)
+            .single()
+
+        if (!profile?.is_superadmin) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/403'
+            return NextResponse.redirect(url)
+        }
     }
 
     return response
@@ -48,13 +75,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * Feel free to modify this pattern to include more paths.
-         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

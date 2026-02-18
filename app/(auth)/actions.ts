@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidatePath } from 'next/cache'
+import type { Database } from '@/types/database.types'
 
 export async function loginAction(formData: FormData) {
     const email = formData.get('email') as string
@@ -21,8 +23,6 @@ export async function loginAction(formData: FormData) {
     revalidatePath('/', 'layout')
     redirect('/dashboard')
 }
-
-import { revalidatePath } from 'next/cache'
 
 export async function signUpAction(formData: FormData) {
     const fullName = formData.get('fullName') as string
@@ -48,10 +48,9 @@ export async function signUpAction(formData: FormData) {
     }
 
     const userId = authData.user.id
-    const adminSupabase = createAdminClient() as any
+    const adminSupabase = createAdminClient()
 
     // 2. Create Organization and link user
-    // We use admin client because RLS might block creation before user is fully confirmed or if we want it atomic
     const sevenDaysFromNow = new Date()
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
 
@@ -81,7 +80,6 @@ export async function signUpAction(formData: FormData) {
 
         if (linkError) throw linkError
 
-        // Note: public.profiles creation is handled by DB Trigger handle_new_user() confirmed via SQL check earlier
     } catch (err: any) {
         console.error('[Signup Action] Error creating organization:', err)
         return { error: 'Usuário criado, mas erro ao configurar organização. Contate o suporte.' }

@@ -21,15 +21,22 @@ import { SummaryDetailModal } from "@/components/dashboard/summary-detail-modal"
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+import type { Database } from "@/types/database.types";
+
+type Analytics = Database['public']['Tables']['group_analytics']['Row'];
+type Alert = Database['public']['Tables']['alerts']['Row'];
+type Summary = Database['public']['Tables']['summaries']['Row'];
+type MemberInsight = Database['public']['Tables']['member_insights']['Row'];
+
 export default function DashboardPage() {
     const { organization, loading: orgLoading } = useOrganization();
-    const [analytics, setAnalytics] = useState<any[]>([]);
-    const [alerts, setAlerts] = useState<any[]>([]);
-    const [summaries, setSummaries] = useState<any[]>([]);
-    const [memberInsights, setMemberInsights] = useState<any[]>([]);
+    const [analytics, setAnalytics] = useState<Analytics[]>([]);
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [summaries, setSummaries] = useState<Summary[]>([]);
+    const [memberInsights, setMemberInsights] = useState<MemberInsight[]>([]);
     const [messageVolume, setMessageVolume] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [selectedSummary, setSelectedSummary] = useState<any>(null);
+    const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null);
 
     const supabase = createClient();
 
@@ -40,42 +47,51 @@ export default function DashboardPage() {
             try {
                 setLoading(true);
 
-                // Fetch Analytics for Chart
-                const { data: analyticsData } = await (supabase as any)
-                    .from("group_analytics")
-                    .select("*")
-                    .eq("organization_id", organization!.id)
-                    .order("period_start", { ascending: true });
+                // Execute all queries in parallel
+                const [
+                    { data: analyticsData },
+                    { data: alertsData },
+                    { data: summariesData },
+                    { data: insightsData },
+                    { data: volumeData }
+                ] = await Promise.all([
+                    // Fetch Analytics for Chart
+                    supabase
+                        .from("group_analytics")
+                        .select("*")
+                        .eq("organization_id", organization!.id)
+                        .order("period_start", { ascending: true }),
 
-                // Fetch Active Alerts
-                const { data: alertsData } = await (supabase as any)
-                    .from("alerts")
-                    .select("*")
-                    .eq("organization_id", organization!.id)
-                    .eq("status", "open");
+                    // Fetch Active Alerts
+                    supabase
+                        .from("alerts")
+                        .select("*")
+                        .eq("organization_id", organization!.id)
+                        .eq("status", "open"),
 
-                // Fetch Recent Summaries
-                const { data: summariesData } = await (supabase as any)
-                    .from("summaries")
-                    .select("*")
-                    .eq("organization_id", organization!.id)
-                    .order("created_at", { ascending: false })
-                    .limit(3);
+                    // Fetch Recent Summaries
+                    supabase
+                        .from("summaries")
+                        .select("*")
+                        .eq("organization_id", organization!.id)
+                        .order("created_at", { ascending: false })
+                        .limit(3),
 
-                // Fetch Member Insights
-                const { data: insightsData } = await (supabase as any)
-                    .from("member_insights")
-                    .select("*")
-                    .eq("organization_id", organization!.id)
-                    .order("created_at", { ascending: false })
-                    .limit(5);
+                    // Fetch Member Insights
+                    supabase
+                        .from("member_insights")
+                        .select("*")
+                        .eq("organization_id", organization!.id)
+                        .order("created_at", { ascending: false })
+                        .limit(5),
 
-                // Fetch Message Volume
-                const { data: volumeData } = await (supabase as any)
-                    .from("message_batches")
-                    .select("message_count")
-                    .eq("organization_id", organization!.id)
-                    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+                    // Fetch Message Volume
+                    supabase
+                        .from("message_batches")
+                        .select("message_count")
+                        .eq("organization_id", organization!.id)
+                        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+                ]);
 
                 const totalVolume = volumeData?.reduce((acc: number, curr: any) => acc + (curr.message_count || 0), 0) || 0;
 
@@ -108,12 +124,12 @@ export default function DashboardPage() {
     }
 
     const avgSentiment = analytics.length
-        ? Math.round(analytics.reduce((acc, curr) => acc + curr.sentiment_score, 0) / analytics.length)
+        ? Math.round(analytics.reduce((acc, curr) => acc + (curr.sentiment_score ?? 0), 0) / analytics.length)
         : 0;
 
     const chartData = analytics.map(a => ({
         date: new Date(a.period_start).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-        score: a.sentiment_score
+        score: a.sentiment_score ?? 0
     }));
 
     // Stagger animation variant

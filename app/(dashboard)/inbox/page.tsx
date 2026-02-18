@@ -24,13 +24,17 @@ export default function InboxPage() {
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"pending" | "resolved" | "archived">("pending");
     const [filter, setFilter] = useState<"all" | "alert" | "summary" | "insight">("all");
 
     const fetchInbox = async () => {
         if (!organization) return;
         setLoading(true);
         try {
-            const data = await getUnifiedInbox(organization.id);
+            // If checking archived, we request archived view from server
+            // If checking pending/resolved, we request active view
+            const view = statusFilter === 'archived' ? 'archived' : 'active';
+            const data = await getUnifiedInbox(organization.id, view);
             setItems(data);
             if (data.length > 0 && !selectedId) {
                 setSelectedId(data[0].id);
@@ -48,12 +52,12 @@ export default function InboxPage() {
         if (!organization) return;
 
         const supabase = createClient();
-        const channel = supabase
+        const updateChannel = supabase
             .channel("inbox-updates")
             .on(
                 "postgres_changes",
                 {
-                    event: "INSERT",
+                    event: "*", // Listen to all events to catch updates
                     schema: "public",
                     table: "alerts",
                     filter: `organization_id=eq.${organization.id}`
@@ -63,7 +67,7 @@ export default function InboxPage() {
             .on(
                 "postgres_changes",
                 {
-                    event: "INSERT",
+                    event: "*",
                     schema: "public",
                     table: "summaries",
                     filter: `organization_id=eq.${organization.id}`
@@ -73,19 +77,30 @@ export default function InboxPage() {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(updateChannel);
         };
-    }, [organization]);
+    }, [organization, statusFilter]); // Re-fetch when statusFilter changes
 
     const filteredItems = useMemo(() => {
         return items.filter(item => {
             const matchesSearch = item.title?.toLowerCase().includes(search.toLowerCase()) ||
                 item.summary?.toLowerCase().includes(search.toLowerCase()) ||
                 item.group_name?.toLowerCase().includes(search.toLowerCase());
-            const matchesFilter = filter === "all" || item.source === filter;
-            return matchesSearch && matchesFilter;
+
+            const matchesType = filter === "all" || item.source === filter;
+
+            // Client-side status filtering for Pending vs Resolved
+            // Archived items are separated by server query, so 'archived' tab just shows what came back
+            let matchesStatus = true;
+            if (statusFilter === 'pending') {
+                matchesStatus = !item.is_resolved;
+            } else if (statusFilter === 'resolved') {
+                matchesStatus = item.is_resolved;
+            }
+
+            return matchesSearch && matchesType && matchesStatus;
         });
-    }, [items, search, filter]);
+    }, [items, search, filter, statusFilter]);
 
     const selectedItem = useMemo(() => {
         return items.find(i => i.id === selectedId) || null;
@@ -99,15 +114,6 @@ export default function InboxPage() {
         }
     };
 
-    if (orgLoading || loading) {
-        return (
-            <div className="flex h-[calc(100vh-12rem)] gap-6 animate-pulse">
-                <div className="w-96 bg-navy-800 rounded-3xl" />
-                <div className="flex-1 bg-navy-800/20 rounded-3xl border border-white/5" />
-            </div>
-        );
-    }
-
     return (
         <div className="flex h-[calc(100vh-12rem)] gap-8 relative overflow-hidden">
             {/* Master List */}
@@ -117,9 +123,31 @@ export default function InboxPage() {
                         <h1 className="text-2xl font-bold text-white tracking-tight">Central de Inteligência</h1>
                         <div className="px-2.5 py-0.5 bg-brand-500/10 border border-brand-500/20 rounded-full">
                             <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest">
-                                {items.filter(i => !i.is_read).length} Novos
+                                {items.filter(i => !i.is_resolved).length} Pendentes
                             </span>
                         </div>
+                    </div>
+
+                    {/* Status Tabs */}
+                    <div className="flex bg-navy-900/50 p-1 rounded-xl border border-white/5">
+                        {[
+                            { id: "pending", label: "Pendentes" },
+                            { id: "resolved", label: "Resolvidos" },
+                            { id: "archived", label: "Arquivados" }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setStatusFilter(tab.id as any)}
+                                className={cn(
+                                    "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                                    statusFilter === tab.id
+                                        ? "bg-brand-500 text-white shadow-lg"
+                                        : "text-secondary-gray-500 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="relative group">
@@ -146,7 +174,7 @@ export default function InboxPage() {
                                 className={cn(
                                     "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
                                     filter === f.id
-                                        ? "bg-brand-500 text-white border-brand-500 shadow-lg shadow-brand-500/20"
+                                        ? "bg-navy-700 text-white border-white/20"
                                         : "bg-navy-800 text-secondary-gray-500 border-white/5 hover:border-white/10 hover:text-white"
                                 )}
                             >
@@ -206,6 +234,18 @@ export default function InboxPage() {
                                 </div>
                             </motion.button>
                         ))}
+
+                        {filteredItems.length === 0 && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-center py-20"
+                            >
+                                <Inbox className="h-10 w-10 text-secondary-gray-700 mx-auto mb-3" />
+                                <p className="text-secondary-gray-500 font-bold">Nenhum registro encontrado</p>
+                                <p className="text-secondary-gray-600 text-[10px] mt-1">Aguarde o processamento das mensagens para ver insights.</p>
+                            </motion.div>
+                        )}
                     </AnimatePresence>
                 </div>
             </div>

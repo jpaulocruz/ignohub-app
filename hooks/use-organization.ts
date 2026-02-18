@@ -29,7 +29,7 @@ export function useOrganization() {
                 // Fetch the active/main organization for the user
                 const { data, error: orgError } = await supabase
                     .from('organization_users')
-                    .select('role, organizations(id, name, subscription_status, stripe_customer_id, plan_type, trial_ends_at)')
+                    .select('role, organizations(id, name, subscription_status, stripe_customer_id, plan_type, trial_ends_at, summary_schedule_time, summary_delivery_days)')
                     .eq('user_id', user.id)
                     .maybeSingle() as any
 

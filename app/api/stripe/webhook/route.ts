@@ -2,9 +2,10 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Database } from '@/types/database.types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27-ac' as any, // Use a stable version
+    apiVersion: '2025-01-27.ac',
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
     }
 
-    const supabase = createAdminClient() as any
+    const supabase = createAdminClient()
 
     try {
         switch (event.type) {
@@ -46,8 +47,8 @@ export async function POST(req: Request) {
                         stripe_customer_id: customerId,
                         stripe_subscription_id: subscriptionId,
                         subscription_status: subscription.status,
-                        plan_type: (subscription.items.data[0].price.product as string) // Assuming product ID is the plan type name or ID
-                    } as any)
+                        plan_type: (subscription.items.data[0].price.product as string)
+                    })
                     .eq('id', organizationId)
                 break
             }
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
                     .from('organizations')
                     .update({
                         subscription_status: subscription.status,
-                    } as any)
+                    })
                     .eq('stripe_subscription_id', subscription.id)
                 break
             }

@@ -46,16 +46,18 @@ serve(async (req) => {
         if (!user) throw new Error("User not authenticated");
         logStep("User authenticated", { userId: user.id });
 
-        // Check if user is superadmin
-        const { data: roleData } = await supabaseClient
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'superadmin')
+        // Check if user is superadmin via profiles flag
+        const { data: profile, error: profileError } = await supabaseClient
+            .from('profiles')
+            .select('is_superadmin')
+            .eq('id', user.id)
             .single();
 
-        if (!roleData) throw new Error("Unauthorized: admin access required");
-        logStep("Admin verified");
+        if (profileError || !profile?.is_superadmin) {
+            logStep("Unauthorized: not a superadmin", { profileError, profile });
+            throw new Error("Unauthorized: superadmin access required");
+        }
+        logStep("Superadmin verified");
 
         const body = await req.json();
         const { action, plan } = body as { action: string; plan: PlanData };

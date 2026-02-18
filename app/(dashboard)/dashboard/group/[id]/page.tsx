@@ -39,7 +39,7 @@ export default function GroupPage() {
 
                 const { data: groupData } = await supabase
                     .from("groups")
-                    .select("*")
+                    .select("*, agent_presets (name)")
                     .eq("id", groupId)
                     .single();
 
@@ -120,7 +120,7 @@ export default function GroupPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <PremiumCard className="p-6 border-l-4 border-l-brand-500">
                     <p className="text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest mb-1">Membro Ativo</p>
-                    <p className="text-2xl font-bold text-white">Hunter AI</p>
+                    <p className="text-2xl font-bold text-white">{group?.agent_presets?.name || "Standard Agent"}</p>
                 </PremiumCard>
                 <PremiumCard className="p-6 border-l-4 border-l-green-500">
                     <p className="text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest mb-1">Total Insights</p>
