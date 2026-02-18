@@ -27,6 +27,47 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
         alertsQuery = alertsQuery.eq('status', 'archived')
     }
 
+    // Fetch Summaries
+    let summariesQuery = supabase
+        .from('summaries')
+        .select(`
+            id,
+            summary_text,
+            highlights,
+            is_read,
+            is_archived,
+            created_at,
+            groups(name)
+        `)
+        .eq('organization_id', organizationId)
+
+    if (view === 'active') {
+        summariesQuery = summariesQuery.eq('is_archived', false)
+    } else {
+        summariesQuery = summariesQuery.eq('is_archived', true)
+    }
+
+    // Fetch Insights
+    let insightsQuery = supabase
+        .from('member_insights')
+        .select(`
+            id,
+            role,
+            insight_text,
+            author_hash,
+            is_read,
+            is_archived,
+            created_at,
+            groups(name)
+        `)
+        .eq('organization_id', organizationId)
+
+    if (view === 'active') {
+        insightsQuery = insightsQuery.eq('is_archived', false)
+    } else {
+        insightsQuery = insightsQuery.eq('is_archived', true)
+    }
+
     // Execute queries in parallel
     const [alertsResult, summariesResult, insightsResult] = await Promise.all([
         alertsQuery.order('created_at', { ascending: false }),
