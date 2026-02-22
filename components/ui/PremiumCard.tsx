@@ -1,39 +1,23 @@
 "use client";
 
-import { HTMLMotionProps, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import React from "react";
 
-interface PremiumCardProps extends HTMLMotionProps<"div"> {
+interface PremiumCardProps extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
     className?: string;
-    variant?: "default" | "glass" | "transparent";
 }
 
-export function PremiumCard({
-    children,
-    className,
-    variant = "default",
-    ...props
-}: PremiumCardProps) {
-    const variants = {
-        default: "bg-navy-800 shadow-premium border border-white/5",
-        glass: "glass-card shadow-premium",
-        transparent: "bg-transparent border-none shadow-none",
-    };
-
+export function PremiumCard({ children, className, ...props }: PremiumCardProps) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+        <div
             className={cn(
-                "relative flex flex-col w-full min-w-0 break-words rounded-3xl",
-                variants[variant],
+                "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
                 className
             )}
             {...props}
         >
             {children}
-        </motion.div>
+        </div>
     );
 }

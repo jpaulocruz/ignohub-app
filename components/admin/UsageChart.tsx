@@ -6,7 +6,7 @@ interface UsageChartProps {
     data: { name: string; value: number }[];
 }
 
-const COLORS = ['#3182CE', '#00B5D8', '#4299E1'];
+const COLORS = ['var(--brand-500)', 'var(--brand-600)', 'var(--brand-400)'];
 
 export function UsageChart({ data }: UsageChartProps) {
     return (
@@ -19,29 +19,29 @@ export function UsageChart({ data }: UsageChartProps) {
                             <stop offset="100%" stopColor="#357ABD" stopOpacity={0.8} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--card-border)" />
                     <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#A3AED0', fontSize: 10, fontWeight: 'bold' }}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}
                         textAnchor="middle"
                         interval={0}
                     />
                     <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#A3AED0', fontSize: 10, fontWeight: 'bold' }}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}
                     />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: '#0B1437',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '16px',
-                            color: '#fff'
+                            backgroundColor: 'var(--background)',
+                            border: '1px solid var(--card-border)',
+                            borderRadius: '12px',
+                            color: 'var(--foreground)'
                         }}
-                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        itemStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                        cursor={{ fill: 'var(--card-hover)' }}
                     />
                     <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                         {data.map((entry, index) => (

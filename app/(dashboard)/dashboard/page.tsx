@@ -14,7 +14,8 @@ import {
     Activity,
     ChevronRight,
     MessageCircle,
-    BarChart3
+    BarChart3,
+    ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 import { SummaryDetailModal } from "@/components/dashboard/summary-detail-modal";
@@ -112,13 +113,20 @@ export default function DashboardPage() {
 
     if (orgLoading || loading) {
         return (
-            <div className="space-y-8 animate-pulse">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-6 pb-16">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                        <div className="h-7 w-32 bg-muted rounded-lg animate-pulse" />
+                        <div className="h-4 w-56 bg-muted rounded animate-pulse" />
+                    </div>
+                    <div className="h-9 w-36 bg-muted rounded-lg animate-pulse" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-32 rounded-3xl bg-navy-800" />
+                        <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
                     ))}
                 </div>
-                <div className="h-96 w-full bg-navy-800 rounded-3xl" />
+                <div className="h-80 w-full bg-muted rounded-xl animate-pulse" />
             </div>
         );
     }
@@ -143,203 +151,189 @@ export default function DashboardPage() {
         }
     };
 
+
     return (
-        <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="space-y-8"
-        >
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-8 pb-16">
+            {/* Page header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Estatísticas Gerais</h1>
-                    <p className="text-secondary-gray-600 font-medium">Acompanhe a saúde e o engajamento de suas comunidades.</p>
+                    <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Overview of your communities and AI insights.
+                    </p>
                 </div>
                 <Link
                     href="/groups"
-                    className="flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-6 rounded-2xl transition-all shadow-lg shadow-brand-500/20 active:scale-95"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/90 transition-colors"
                 >
-                    <Users className="h-5 w-5" />
-                    Gerenciar Canais
+                    <Users className="h-4 w-4" />
+                    View communities
                 </Link>
-            </header>
+            </div>
 
-            {/* Overview Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Stats grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <PremiumCard className="p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-full bg-secondary-gray-400/10 flex items-center justify-center">
-                            <Smile className="h-7 w-7 text-brand-500" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-secondary-gray-500">Sentimento Global</p>
-                            <h3 className="text-2xl font-bold text-white">{avgSentiment}%</h3>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-muted-foreground">Sentiment score</p>
+                        <Smile className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="mt-4 flex items-center gap-2">
-                        <div className={cn("w-2 h-2 rounded-full", avgSentiment > 70 ? "bg-green-500" : "bg-yellow-500")} />
-                        <span className="text-[10px] font-bold text-secondary-gray-600 uppercase tracking-wider">
-                            {avgSentiment > 70 ? "Clima Positivo" : "Atenção Necessária"}
-                        </span>
-                    </div>
+                    <p className="text-3xl font-semibold text-foreground">{avgSentiment}%</p>
+                    <span className={cn(
+                        "inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium",
+                        avgSentiment > 70
+                            ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
+                            : "bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400"
+                    )}>
+                        {avgSentiment > 70 ? "Healthy" : "Needs attention"}
+                    </span>
                 </PremiumCard>
 
                 <PremiumCard className="p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-full bg-red-500/10 flex items-center justify-center">
-                            <AlertTriangle className="h-7 w-7 text-red-500" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-secondary-gray-500">Alertas Abertos</p>
-                            <h3 className="text-2xl font-bold text-white">{alerts.length}</h3>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-muted-foreground">Active alerts</p>
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="mt-4 flex items-center gap-2">
-                        <Zap className="h-3 w-3 text-red-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-secondary-gray-600 uppercase tracking-wider">Prioridade Alta</span>
-                    </div>
+                    <p className="text-3xl font-semibold text-foreground">{alerts.length}</p>
+                    <span className={cn(
+                        "inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium",
+                        alerts.length > 0
+                            ? "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+                            : "bg-muted text-muted-foreground"
+                    )}>
+                        {alerts.length > 0 ? "Requires review" : "All clear"}
+                    </span>
                 </PremiumCard>
 
                 <PremiumCard className="p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-full bg-green-500/10 flex items-center justify-center">
-                            <Activity className="h-7 w-7 text-green-500" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-secondary-gray-500">Volume 24h</p>
-                            <h3 className="text-2xl font-bold text-white">{messageVolume.toLocaleString()}</h3>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-muted-foreground">Messages (24h)</p>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="mt-4 flex items-center gap-2">
-                        <MessageCircle className="h-3 w-3 text-green-500" />
-                        <span className="text-[10px] font-bold text-secondary-gray-600 uppercase tracking-wider">Mensagens Processadas</span>
-                    </div>
+                    <p className="text-3xl font-semibold text-foreground">
+                        {messageVolume > 999 ? `${(messageVolume / 1000).toFixed(1)}K` : messageVolume}
+                    </p>
+                    <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
+                        Processed
+                    </span>
                 </PremiumCard>
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Evolution Chart */}
+            {/* Main grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Chart + summaries */}
                 <div className="lg:col-span-2 space-y-6">
-                    <PremiumCard className="p-8">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                                <BarChart3 className="h-5 w-5 text-brand-500" />
-                                Evolução do Sentimento
-                            </h3>
-                            <div className="flex gap-2">
-                                <button className="px-3 py-1 bg-navy-900 rounded-lg text-xs font-bold text-brand-500 border border-white/5">Geral</button>
+                    <PremiumCard className="p-6">
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <h2 className="text-sm font-semibold text-foreground">Sentiment trend</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">Community health over time</p>
+                            </div>
+                            <div className="flex gap-1">
+                                <button className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">Historical</button>
+                                <button className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground">Real-time</button>
                             </div>
                         </div>
-                        <div className="h-[300px] w-full">
+                        <div className="h-[260px] w-full">
                             <SentimentChart data={chartData} />
                         </div>
                     </PremiumCard>
 
-                    {/* Recent Activity / Summaries */}
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-3 ml-2">
-                            <Zap className="h-5 w-5 text-brand-500" />
-                            Insights Recentes
-                        </h3>
-                        <div className="grid grid-cols-1 gap-4">
-                            {summaries.length === 0 ? (
-                                <PremiumCard variant="transparent" className="p-12 text-center border-2 border-dashed border-white/5">
-                                    <p className="text-secondary-gray-600 font-medium italic">Nenhum insight disponível no momento.</p>
-                                </PremiumCard>
-                            ) : (
-                                summaries.map((s) => (
-                                    <motion.div key={s.id} whileHover={{ x: 5 }}>
-                                        <PremiumCard className="p-6 hover:bg-navy-800/80 transition-all cursor-pointer group">
-                                            <div className="flex items-start justify-between gap-6">
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest bg-brand-500/10 px-2 py-1 rounded">Resumo IA</span>
-                                                        <span className="text-[10px] font-medium text-secondary-gray-600">
-                                                            {new Date(s.created_at).toLocaleString("pt-BR")}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-secondary-gray-300 text-sm font-medium leading-relaxed line-clamp-2">
-                                                        {s.summary_text}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() => setSelectedSummary(s)}
-                                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-navy-900 border border-white/5 text-secondary-gray-600 group-hover:text-brand-500 group-hover:border-brand-500/30 transition-all"
-                                                >
-                                                    <ChevronRight className="h-5 w-5" />
-                                                </button>
-                                            </div>
-                                        </PremiumCard>
-                                    </motion.div>
-                                ))
-                            )}
+                    {/* Summaries */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-sm font-semibold text-foreground">AI summaries</h2>
+                            <button className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+                                View all <ArrowRight className="h-3 w-3" />
+                            </button>
                         </div>
-                    </div>
-                </div>
-
-                {/* Sidebar Metrics */}
-                <div className="space-y-8">
-                    {/* Member Insights */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-3 ml-2">
-                            <Users className="h-5 w-5 text-brand-500" />
-                            Participação Ativa
-                        </h3>
-                        <PremiumCard className="p-6">
-                            <div className="space-y-6">
-                                {memberInsights.length === 0 ? (
-                                    <p className="text-center py-12 text-secondary-gray-600 text-sm italic font-medium">Nenhum destaque detectado.</p>
-                                ) : (
-                                    memberInsights.map((member, i) => (
-                                        <div key={member.id} className="flex items-start gap-4 transition-all hover:translate-x-1 group">
-                                            <div className="w-10 h-10 rounded-xl bg-navy-900 flex items-center justify-center border border-white/5 text-brand-500 font-bold text-xs shrink-0 group-hover:border-brand-500/30">
-                                                {i + 1}
-                                            </div>
-                                            <div className="space-y-1 overflow-hidden">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-white font-mono">{member.author_hash.slice(0, 8)}</span>
-                                                    <span className={cn(
-                                                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                                                        member.role === "influencer" ? "bg-brand-500/20 text-brand-400" : "bg-navy-900 text-secondary-gray-600"
-                                                    )}>
-                                                        {member.role || "MEMBER"}
-                                                    </span>
-                                                </div>
-                                                <p className="text-[11px] text-secondary-gray-500 font-medium leading-tight line-clamp-2">
-                                                    {member.insight_text}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </PremiumCard>
-                    </div>
-
-                    {/* Active Alerts List */}
-                    {alerts.length > 0 && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-3 ml-2">
-                                <AlertTriangle className="h-5 w-5 text-red-500" />
-                                Alertas do Período
-                            </h3>
-                            <div className="space-y-3">
-                                {alerts.map(a => (
-                                    <PremiumCard key={a.id} className="p-5 border-l-4 border-l-red-500">
+                        {summaries.length === 0 ? (
+                            <PremiumCard className="p-12 text-center">
+                                <p className="text-sm text-muted-foreground">No summaries yet.</p>
+                                <p className="text-xs text-muted-foreground mt-1">Summaries will appear once your communities have activity.</p>
+                            </PremiumCard>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {summaries.map((s) => (
+                                    <PremiumCard
+                                        key={s.id}
+                                        className="p-4 cursor-pointer hover:shadow-md transition-shadow group"
+                                        onClick={() => setSelectedSummary(s)}
+                                    >
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[9px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded">
-                                                {a.severity}
-                                            </span>
-                                            <span className="text-[9px] font-bold text-secondary-gray-600">
-                                                {new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <span className="text-[11px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">AI insight</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
-                                        <h4 className="text-sm font-bold text-white leading-tight">{a.title}</h4>
+                                        <p className="text-sm text-foreground leading-relaxed line-clamp-2">{s.summary_text}</p>
+                                        <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                                            Read more <ChevronRight className="h-3 w-3" />
+                                        </div>
                                     </PremiumCard>
                                 ))}
                             </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-6">
+                    {/* Member insights */}
+                    <PremiumCard>
+                        <div className="px-5 py-4 border-b border-border">
+                            <h2 className="text-sm font-semibold text-foreground">Top members</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">Active participation insights</p>
                         </div>
+                        {memberInsights.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <p className="text-sm text-muted-foreground">No member data yet.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {memberInsights.map((member) => (
+                                    <div key={member.id} className="px-5 py-4 hover:bg-accent/50 transition-colors">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-xs font-mono text-primary">#{member.author_hash.slice(0, 8)}</span>
+                                            <span className={cn(
+                                                "text-[11px] font-medium px-2 py-0.5 rounded-full",
+                                                member.role === "influencer"
+                                                    ? "bg-primary/10 text-primary"
+                                                    : "bg-muted text-muted-foreground"
+                                            )}>
+                                                {member.role || "Member"}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{member.insight_text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </PremiumCard>
+
+                    {/* Alerts */}
+                    {alerts.length > 0 && (
+                        <PremiumCard>
+                            <div className="px-5 py-4 border-b border-border">
+                                <h2 className="text-sm font-semibold text-foreground">Alerts</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">Items requiring attention</p>
+                            </div>
+                            <div className="divide-y divide-border">
+                                {alerts.map(a => (
+                                    <div key={a.id} className="px-5 py-4 hover:bg-accent/50 transition-colors cursor-pointer">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 capitalize">
+                                                {a.severity}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-medium text-foreground leading-relaxed">{a.title}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </PremiumCard>
                     )}
                 </div>
             </div>
@@ -350,6 +344,7 @@ export default function DashboardPage() {
                     onClose={() => setSelectedSummary(null)}
                 />
             )}
-        </motion.div>
+        </div>
     );
 }
+

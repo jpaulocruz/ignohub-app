@@ -14,9 +14,9 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
             type,
             severity,
             title,
-            summary,
             status,
             created_at,
+            is_bookmarked,
             groups(name)
         `)
         .eq('organization_id', organizationId)
@@ -33,9 +33,9 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
         .select(`
             id,
             summary_text,
-            highlights,
             is_read,
             is_archived,
+            is_bookmarked,
             created_at,
             groups(name)
         `)
@@ -54,9 +54,9 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
             id,
             role,
             insight_text,
-            author_hash,
             is_read,
             is_archived,
+            is_bookmarked,
             created_at,
             groups(name)
         `)
@@ -86,6 +86,7 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
             source: 'alert',
             is_read: a.status !== 'open', // Open = Unread, Resolved = Read
             is_resolved: a.status === 'resolved',
+            is_bookmarked: a.is_bookmarked || false,
             group_name: a.groups?.name
         })),
         ...(summaries || []).map((s: any) => ({
@@ -94,6 +95,7 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
             title: 'Resumo de Inteligência',
             summary: s.summary_text,
             is_resolved: s.is_read, // Treat read as resolved for consistency
+            is_bookmarked: s.is_bookmarked || false,
             group_name: s.groups?.name
         })),
         ...(insights || []).map((i: any) => ({
@@ -102,6 +104,7 @@ export async function getUnifiedInbox(organizationId: string, view: 'active' | '
             title: `Insight: ${i.role || 'Membro'}`,
             summary: i.insight_text,
             is_resolved: i.is_read, // Treat read as resolved for consistency
+            is_bookmarked: i.is_bookmarked || false,
             group_name: i.groups?.name
         }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -119,6 +122,7 @@ export async function markAsReadAction(id: string, source: 'alert' | 'summary' |
     } else if (source === 'insight') {
         await supabase.from('member_insights').update({ is_read: true }).eq('id', id)
     }
+    revalidatePath('/inbox')
 }
 
 export async function archiveItemAction(id: string, source: 'alert' | 'summary' | 'insight') {
@@ -131,4 +135,18 @@ export async function archiveItemAction(id: string, source: 'alert' | 'summary' 
     } else if (source === 'insight') {
         await supabase.from('member_insights').update({ is_archived: true }).eq('id', id)
     }
+    revalidatePath('/inbox')
+}
+
+export async function toggleBookmarkAction(id: string, source: 'alert' | 'summary' | 'insight', is_bookmarked: boolean) {
+    const supabase = await createClient() as any
+
+    if (source === 'alert') {
+        await supabase.from('alerts').update({ is_bookmarked }).eq('id', id)
+    } else if (source === 'summary') {
+        await supabase.from('summaries').update({ is_bookmarked }).eq('id', id)
+    } else if (source === 'insight') {
+        await supabase.from('member_insights').update({ is_bookmarked }).eq('id', id)
+    }
+    revalidatePath('/inbox')
 }

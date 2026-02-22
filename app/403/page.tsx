@@ -5,24 +5,26 @@ export default function ForbiddenPage() {
     return (
         <div className="min-h-screen bg-navy-950 flex items-center justify-center p-6">
             <div className="text-center space-y-8 max-w-md">
-                <div className="mx-auto h-20 w-20 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <div className="mx-auto h-20 w-20 rounded-sm bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                     <ShieldX className="h-10 w-10 text-red-500" />
                 </div>
 
-                <div className="space-y-3">
-                    <h1 className="text-5xl font-black text-white tracking-tighter">403</h1>
-                    <p className="text-xl font-bold text-secondary-gray-400">Acesso Negado</p>
-                    <p className="text-sm text-secondary-gray-500 leading-relaxed">
-                        Você não possui permissão para acessar esta área.
-                        Apenas superadmins podem visualizar esta página.
+                <div className="space-y-4">
+                    <h1 className="text-8xl font-black text-white tracking-tighter leading-none">403</h1>
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-[10px] font-black uppercase text-red-500 tracking-[0.4em] bg-red-500/10 px-4 py-1 border border-red-500/20">Protocol Violation</p>
+                        <p className="text-sm font-black text-secondary-gray-500 uppercase tracking-widest mt-2">Access Denied</p>
+                    </div>
+                    <p className="text-xs text-secondary-gray-600 leading-relaxed max-w-[280px] mx-auto font-medium">
+                        Your terminal credentials lack parity for this operational sector. Restricted to Root Administrators.
                     </p>
                 </div>
 
                 <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-2 px-8 py-4 bg-brand-500 text-white rounded-2xl font-black text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-brand-500/20"
+                    className="inline-flex items-center gap-2 px-10 py-5 bg-brand-500 text-white rounded-sm font-black text-[10px] uppercase tracking-[0.3em] hover:bg-brand-600 transition-all shadow-xl shadow-brand-500/10 active:translate-y-[1px]"
                 >
-                    Voltar ao Dashboard
+                    Return to Command
                 </Link>
             </div>
         </div>

@@ -18,7 +18,7 @@ export async function getPlans() {
 }
 
 export async function updatePlanConfig(id: string, updates: {
-    max_groups?: number;
+    max_groups?: number | null;
     retention_days?: number;
     price_monthly?: number;
     name?: string;

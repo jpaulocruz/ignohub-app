@@ -3,6 +3,7 @@
 import { LucideLock, LucideCreditCard, LucideLogOut } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
 
 export function TrialOverlay() {
     const supabase = createClient()
@@ -13,39 +14,34 @@ export function TrialOverlay() {
     }
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950/90 backdrop-blur-xl p-6">
-            <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 p-12 rounded-[40px] shadow-2xl space-y-8 text-center animate-in fade-in zoom-in duration-500">
-                <div className="mx-auto w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
-                    <LucideLock className="h-10 w-10 text-red-500" />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm p-6">
+            <div className="max-w-sm w-full bg-card border border-border p-8 rounded-xl shadow-xl space-y-6 text-center animate-in fade-in zoom-in duration-200">
+                <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center">
+                    <LucideLock className="h-6 w-6 text-destructive" />
                 </div>
 
-                <div className="space-y-4">
-                    <h2 className="text-3xl font-black text-white tracking-tighter">Período de Teste Expirado</h2>
-                    <p className="text-zinc-400 font-medium leading-relaxed">
-                        Seu trial de 7 dias chegou ao fim. Para continuar acessando os resumos e métricas da sua organização, ative uma assinatura agora.
+                <div className="space-y-2">
+                    <h2 className="text-lg font-semibold text-foreground">Trial expired</h2>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        Your 7-day trial has ended. Activate a subscription to continue accessing your organization's summaries and metrics.
                     </p>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                    <Link
-                        href="/billing"
-                        className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-black py-4 px-8 rounded-2xl transition-all shadow-lg shadow-primary/20"
-                    >
-                        <LucideCreditCard className="h-5 w-5" />
-                        ATIVAR ASSINATURA
-                    </Link>
-
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center justify-center gap-2 text-zinc-500 hover:text-white font-bold py-2 transition-colors text-sm"
-                    >
+                <div className="flex flex-col gap-2">
+                    <Button asChild className="gap-2">
+                        <Link href="/billing">
+                            <LucideCreditCard className="h-4 w-4" />
+                            Activate subscription
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2 text-muted-foreground">
                         <LucideLogOut className="h-4 w-4" />
-                        Sair da conta
-                    </button>
+                        Sign out
+                    </Button>
                 </div>
 
-                <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest pt-4 border-t border-zinc-800">
-                    IgnoHub &bull; Analytics for WhatsApp & Telegram
+                <p className="text-xs text-muted-foreground border-t border-border pt-4">
+                    IgnoHub · Analytics for WhatsApp & Telegram
                 </p>
             </div>
         </div>

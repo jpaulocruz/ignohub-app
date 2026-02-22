@@ -5,19 +5,17 @@ import { PremiumCard } from "@/components/ui/PremiumCard";
 import { useOrganization } from "@/hooks/use-organization";
 import { createClient } from "@/lib/supabase/client";
 import {
-    User,
-    Building2,
-    Settings,
-    Bell,
-    Shield,
-    Save,
-    CheckCircle2,
-    AlertCircle,
-    Clock,
-    Zap
+    User, Building2, Settings, Bell, Shield, Save,
+    CheckCircle2, AlertCircle, Clock, Zap, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function SettingsPage() {
     const { organization, refresh } = useOrganization();
@@ -198,11 +196,11 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <div className="space-y-10 animate-pulse pb-12">
-                <div className="h-16 w-1/4 bg-navy-800 rounded-2xl" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="h-96 bg-navy-800 rounded-premium" />
-                    <div className="h-48 bg-navy-800 rounded-premium" />
+            <div className="space-y-6 animate-pulse pb-12">
+                <div className="h-8 w-1/4 bg-muted rounded-lg" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="h-80 bg-muted rounded-xl" />
+                    <div className="h-48 bg-muted rounded-xl" />
                 </div>
             </div>
         );
@@ -211,27 +209,26 @@ export default function SettingsPage() {
     return (
         <div className="space-y-12 pb-32">
             <header className="space-y-2">
-                <h1 className="text-5xl font-black text-white tracking-tighter leading-none">Configurações</h1>
-                <p className="text-secondary-gray-500 font-medium text-lg">
-                    Gerencie seu perfil e as preferências da organização.
+                <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+                <p className="text-sm text-muted-foreground">
+                    Manage your account and organization preferences.
                 </p>
             </header>
 
             <AnimatePresence>
                 {status && (
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
                         className={cn(
-                            "p-4 rounded-2xl flex items-center gap-3 border shadow-lg",
+                            "p-3 rounded-lg flex items-center gap-3 border",
                             status.type === 'success'
-                                ? "bg-green-500/10 border-green-500/20 text-green-500"
-                                : "bg-red-500/10 border-red-500/20 text-red-500"
+                                ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
+                                : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
                         )}
                     >
-                        {status.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-                        <p className="text-sm font-bold">{status.message}</p>
+                        <p className="text-sm font-medium">{status.message}</p>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -240,14 +237,12 @@ export default function SettingsPage() {
                 <div className="lg:col-span-2 space-y-10">
                     {/* User Profile Section */}
                     <section className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-500 border border-brand-500/20">
-                                <User className="h-4 w-4" />
-                            </div>
-                            <h2 className="text-2xl font-black text-white tracking-tight">Perfil do Usuário</h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <User className="h-4 w-4 text-primary" />
+                            <h2 className="text-base font-semibold">Profile</h2>
                         </div>
 
-                        <PremiumCard className="p-8 space-y-8">
+                        <PremiumCard className="p-6 space-y-6">
                             <div className="flex flex-col md:flex-row gap-8 items-start">
                                 {/* Avatar */}
                                 <div className="flex-shrink-0">
@@ -277,16 +272,6 @@ export default function SettingsPage() {
                                                     .getPublicUrl(filePath);
 
                                                 setAvatarUrl(publicUrl);
-
-                                                // Create a synthetic event to trigger save
-                                                // or just update state and let user save manually?
-                                                // Better to just update visual state and let final save handle the DB update 
-                                                // BUT we need the URL in the DB. 
-                                                // Let's rely on handleSave to pick up valid avatarUrl, 
-                                                // but handleSave uses state 'avatarUrl'. 
-                                                // The handleSave currently effectively ignores avatarUrl updates in the DB update call
-                                                // We must enable it in handleSave.
-
                                             } catch (error) {
                                                 console.error('Error uploading avatar:', error);
                                                 setStatus({ type: 'error', message: 'Erro ao fazer upload da imagem.' });
@@ -297,66 +282,66 @@ export default function SettingsPage() {
                                     />
                                     <label
                                         htmlFor="avatar-upload"
-                                        className="w-24 h-24 rounded-full bg-navy-900 border-2 border-dashed border-white/10 flex items-center justify-center relative group cursor-pointer overflow-hidden hover:border-brand-500/50 transition-colors"
+                                        className="w-20 h-20 rounded-full bg-muted border border-border flex items-center justify-center relative group cursor-pointer overflow-hidden hover:border-primary/50 transition-colors"
                                     >
                                         {avatarUrl ? (
                                             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                         ) : (
-                                            <User className="h-8 w-8 text-secondary-gray-600 group-hover:text-brand-500 transition-colors" />
+                                            <User className="h-7 w-7 text-muted-foreground group-hover:text-primary transition-colors" />
                                         )}
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <p className="text-[10px] uppercase font-bold text-white">Alterar</p>
+                                            <p className="text-xs font-medium text-white">Update</p>
                                         </div>
                                     </label>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 w-full">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Nome Completo</label>
-                                        <input
+                                        <Label className="text-sm font-medium text-muted-foreground">Full Legal Name</Label>
+                                        <Input
                                             type="text"
                                             value={fullName}
                                             onChange={(e) => setFullName(e.target.value)}
-                                            placeholder="Seu nome"
-                                            className="w-full bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all font-bold placeholder:text-secondary-gray-700 shadow-inner"
+                                            placeholder="Your full name"
+                                            className="focus-visible:ring-primary"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Cargo / Função</label>
-                                        <input
+                                        <Label className="text-sm font-medium text-muted-foreground">Operational Role</Label>
+                                        <Input
                                             type="text"
                                             value={jobTitle}
                                             onChange={(e) => setJobTitle(e.target.value)}
-                                            placeholder="Ex: CEO, Gerente de Mídia"
-                                            className="w-full bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all font-bold placeholder:text-secondary-gray-700 shadow-inner"
+                                            placeholder="e.g. Community Manager"
+                                            className="focus-visible:ring-primary"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Telefone</label>
-                                        <input
+                                        <Label className="text-sm font-medium text-muted-foreground">Comm Link (Phone)</Label>
+                                        <Input
                                             type="tel"
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
-                                            placeholder="+55 11 99999-9999"
-                                            className="w-full bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all font-bold placeholder:text-secondary-gray-700 shadow-inner"
+                                            placeholder="+00 00 00000-0000"
+                                            className="focus-visible:ring-primary"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">E-mail</label>
-                                        <input
+                                        <Label className="text-sm font-medium text-muted-foreground">Terminal Address</Label>
+                                        <Input
                                             type="email"
                                             disabled
                                             value={profile?.email || ""}
-                                            className="w-full bg-navy-900 border border-white/5 rounded-2xl p-4 text-secondary-gray-600 font-bold opacity-50 cursor-not-allowed"
+                                            className="opacity-50 cursor-not-allowed"
                                         />
                                     </div>
                                     <div className="col-span-full space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Bio / Sobre</label>
-                                        <textarea
+                                        <Label className="text-sm font-medium text-muted-foreground">Operational Bio</Label>
+                                        <Textarea
                                             value={bio}
                                             onChange={(e) => setBio(e.target.value)}
-                                            placeholder="Conte um pouco sobre você..."
-                                            className="w-full h-24 bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all text-sm placeholder:text-secondary-gray-700 shadow-inner resize-none leading-relaxed"
+                                            placeholder="Bio"
+                                            className="h-24 text-sm resize-none focus-visible:ring-primary"
                                         />
                                     </div>
                                 </div>
@@ -366,178 +351,149 @@ export default function SettingsPage() {
 
                     {/* Organization Section */}
                     <section className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-500 border border-brand-500/20">
-                                <Building2 className="h-4 w-4" />
-                            </div>
-                            <h2 className="text-2xl font-black text-white tracking-tight">Organização</h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Building2 className="h-4 w-4 text-primary" />
+                            <h2 className="text-base font-semibold">Organization</h2>
                         </div>
 
-                        <PremiumCard className="p-8 space-y-8">
+                        <PremiumCard className="p-6 space-y-6">
                             <div className="space-y-2 max-w-md">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Nome da Organização</label>
-                                <input
+                                <Label className="text-sm font-medium text-muted-foreground">Organization name</Label>
+                                <Input
                                     type="text"
                                     value={orgName}
                                     onChange={(e) => setOrgName(e.target.value)}
-                                    placeholder="Nome da sua empresa"
-                                    className="w-full bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all font-bold placeholder:text-secondary-gray-700 shadow-inner"
+                                    placeholder="Your organization name"
+                                    className="focus-visible:ring-primary max-w-md"
                                 />
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="space-y-4 pt-4 border-t border-border">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Zap className="h-4 w-4 text-brand-500" />
-                                        <h3 className="text-sm font-black text-white uppercase tracking-widest">Geração Automática</h3>
+                                        <Zap className="h-4 w-4 text-primary" />
+                                        <h3 className="text-sm font-medium">Auto-generate insights</h3>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAutoGenerate(!autoGenerate)}
-                                        className={cn(
-                                            "w-10 h-5 rounded-full transition-all relative",
-                                            autoGenerate ? "bg-brand-500" : "bg-navy-800"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "absolute top-1 w-3 h-3 bg-white rounded-full transition-all shadow-sm",
-                                            autoGenerate ? "right-1" : "left-1"
-                                        )} />
-                                    </button>
+                                    <Switch
+                                        checked={autoGenerate}
+                                        onCheckedChange={setAutoGenerate}
+                                        className="data-[state=checked]:bg-primary"
+                                    />
                                 </div>
-                                <p className="text-sm text-secondary-gray-500">
-                                    Quando ativado, a IA analisará automaticamente as conversas e gerará resumos e insights periódicos.
+                                <p className="text-sm text-muted-foreground">
+                                    When enabled, AI will automatically analyze conversations and generate periodic summaries and insights.
                                 </p>
 
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="space-y-4 pt-4 border-t border-border">
                                 <div className="flex items-center gap-2">
-                                    <Shield className="h-4 w-4 text-brand-500" />
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Definição de Alertas</h3>
+                                    <Shield className="h-4 w-4 text-primary" />
+                                    <h3 className="text-sm font-medium">Alert definition</h3>
                                 </div>
-                                <p className="text-sm text-secondary-gray-500">
-                                    Instrua a IA sobre o que deve ser considerado um "Alerta" na sua organização.
+                                <p className="text-sm text-muted-foreground">
+                                    Instruct the AI on what should be considered an alert in your organization.
                                 </p>
-                                <textarea
+                                <Textarea
                                     value={alertInstructions}
                                     onChange={(e) => setAlertInstructions(e.target.value)}
-                                    placeholder="Ex: Considere alerta qualquer menção a cancelamento, problemas jurídicos ou reclamações sobre preços. Ignore reclamações pontuais sobre bugs já conhecidos."
-                                    className="w-full h-32 bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all text-sm placeholder:text-secondary-gray-700 shadow-inner resize-none leading-relaxed"
+                                    placeholder="E.g. Flag any discussions about competitor products or negative brand mentions..."
+                                    className="h-32 text-sm resize-none focus-visible:ring-primary"
                                 />
                             </div>
 
-                            <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="space-y-4 pt-4 border-t border-border">
                                 <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-brand-500" />
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Agendamento de Resumos</h3>
+                                    <Clock className="h-4 w-4 text-primary" />
+                                    <h3 className="text-sm font-medium">Summary schedule</h3>
                                 </div>
-                                <p className="text-sm text-secondary-gray-500">
-                                    Defina quando você deseja receber os resumos automáticos dos seus grupos.
+                                <p className="text-sm text-muted-foreground">
+                                    Set when you want to receive automatic summaries of your communities.
                                 </p>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Horário de Envio</label>
-                                        <input
+                                        <Label className="text-sm font-medium text-muted-foreground">Send time</Label>
+                                        <Input
                                             type="time"
                                             value={summaryTime}
                                             onChange={(e) => setSummaryTime(e.target.value)}
-                                            className="w-full bg-navy-950 border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-500 transition-all font-bold shadow-inner"
+                                            className="focus-visible:ring-primary"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 ml-1">Dias da Semana</label>
+                                        <Label className="text-sm font-medium text-muted-foreground">Days of the week</Label>
                                         <div className="flex flex-wrap gap-2">
-                                            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => (
-                                                <button
+                                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+                                                <Button
                                                     key={day}
                                                     type="button"
+                                                    variant={summaryDays.includes(idx) ? "default" : "outline"}
+                                                    size="icon"
                                                     onClick={() => toggleDay(idx)}
-                                                    className={cn(
-                                                        "w-10 h-10 rounded-xl text-xs font-bold transition-all border",
-                                                        summaryDays.includes(idx)
-                                                            ? "bg-brand-500 text-white border-brand-500 shadow-lg shadow-brand-500/20"
-                                                            : "bg-navy-900 text-secondary-gray-600 border-white/5 hover:border-white/10 hover:text-white"
-                                                    )}
+                                                    className="w-10 h-10 text-xs font-medium"
                                                 >
-                                                    {day}
-                                                </button>
+                                                    {day.slice(0, 2)}
+                                                </Button>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-6 pt-6 border-t border-white/5">
+                            <div className="space-y-4 pt-4 border-t border-border">
                                 <div className="flex items-center gap-2">
-                                    <Bell className="h-4 w-4 text-brand-500" />
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Canais de Entrega</h3>
+                                    <Bell className="h-4 w-4 text-primary" />
+                                    <h3 className="text-sm font-medium">Delivery channels</h3>
                                 </div>
-                                <p className="text-sm text-secondary-gray-500 font-medium">
-                                    Escolha onde você deseja receber as notificações e resumos automatizados.
+                                <p className="text-sm text-muted-foreground">
+                                    Choose where you want to receive automated summaries and notifications.
                                 </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-4 p-6 bg-navy-950/50 rounded-2xl border border-white/5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                                    <User className="w-4 h-4 text-secondary-gray-600" />
+                                                <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+                                                    <User className="w-3.5 h-3.5 text-primary" />
                                                 </div>
-                                                <p className="text-xs font-black text-white uppercase tracking-tighter">Resumo por E-mail</p>
+                                                <p className="text-sm font-medium">Email summary</p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setEmailEnabled(!emailEnabled)}
-                                                className={cn(
-                                                    "w-10 h-5 rounded-full transition-all relative",
-                                                    emailEnabled ? "bg-brand-500" : "bg-navy-800"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all shadow-sm",
-                                                    emailEnabled ? "right-1" : "left-1"
-                                                )} />
-                                            </button>
+                                            <Switch
+                                                checked={emailEnabled}
+                                                onCheckedChange={setEmailEnabled}
+                                                className="data-[state=checked]:bg-primary"
+                                            />
                                         </div>
-                                        <input
+                                        <Input
                                             type="email"
                                             value={notifEmail}
                                             onChange={(e) => setNotifEmail(e.target.value)}
-                                            placeholder="nome@exemplo.com"
-                                            className="w-full bg-navy-900 border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 font-black placeholder:text-secondary-gray-700 shadow-inner"
+                                            placeholder="notifications@example.com"
+                                            className="text-sm focus-visible:ring-primary"
                                         />
                                     </div>
 
-                                    <div className="space-y-4 p-6 bg-navy-950/50 rounded-2xl border border-white/5">
+                                    <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20">
-                                                    <User className="w-4 h-4 text-secondary-gray-600" />
+                                                <div className="w-7 h-7 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                                    <User className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                                                 </div>
-                                                <p className="text-xs font-black text-white uppercase tracking-tighter">Resumo por WhatsApp</p>
+                                                <p className="text-sm font-medium">WhatsApp summary</p>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setWhatsappEnabled(!whatsappEnabled)}
-                                                className={cn(
-                                                    "w-10 h-5 rounded-full transition-all relative",
-                                                    whatsappEnabled ? "bg-brand-500" : "bg-navy-800"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all shadow-sm",
-                                                    whatsappEnabled ? "right-1" : "left-1"
-                                                )} />
-                                            </button>
+                                            <Switch
+                                                checked={whatsappEnabled}
+                                                onCheckedChange={setWhatsappEnabled}
+                                                className="data-[state=checked]:bg-primary"
+                                            />
                                         </div>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={notifWhatsapp}
                                             onChange={(e) => setNotifWhatsapp(e.target.value)}
-                                            placeholder="5511999999999"
-                                            className="w-full bg-navy-900 border border-white/5 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 font-black placeholder:text-secondary-gray-700 shadow-inner"
+                                            placeholder="WhatsApp number or WABA ID"
+                                            className="text-sm focus-visible:ring-primary"
                                         />
                                     </div>
                                 </div>
@@ -548,28 +504,23 @@ export default function SettingsPage() {
 
                 <aside className="space-y-10 lg:sticky lg:top-24">
                     {/* Action Card */}
-                    <PremiumCard className="p-8 space-y-6 bg-gradient-to-br from-brand-500 to-brand-600 border-none shadow-2xl shadow-brand-500/20">
+                    <PremiumCard className="p-6 space-y-4">
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase text-white/60 tracking-[0.3em]">Gerenciamento</p>
-                            <h3 className="text-2xl font-black text-white leading-tight">Salvar Alterações</h3>
+                            <h3 className="text-base font-semibold">Save changes</h3>
+                            <p className="text-sm text-muted-foreground">Changes will apply immediately across your workspace.</p>
                         </div>
-                        <p className="text-white/80 font-medium text-sm">
-                            Suas alterações serão refletidas em todo o ecossistema IgnoHub instantaneamente.
-                        </p>
-                        <button
+                        <Button
                             type="submit"
                             disabled={saving}
-                            className="w-full bg-white text-brand-500 font-black py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 text-lg shadow-xl shadow-brand-900/10 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full"
                         >
                             {saving ? (
-                                <div className="h-5 w-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
-                                <>
-                                    <Save className="h-5 w-5" />
-                                    Confirmar
-                                </>
+                                <Save className="h-4 w-4 mr-2" />
                             )}
-                        </button>
+                            {saving ? "Saving..." : "Save changes"}
+                        </Button>
                     </PremiumCard>
 
                     {/* Quick Access - HIDDEN as pages do not exist yet

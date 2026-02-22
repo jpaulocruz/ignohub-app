@@ -1,97 +1,167 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Tailwind v4: token declarations (required for bg-card, bg-popover etc.) ─── */
+
 @theme {
-  /* Typography */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* These map the CSS custom properties to Tailwind utility class tokens */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-  /* Primary Colors - Horizon UI Style (Vibrant Blue/Cyan) */
-  --color-brand-100: #e9e3ff;
-  --color-brand-200: #b0a1ff;
-  --color-brand-300: #7551ff;
-  --color-brand-400: #5d27ff;
-  --color-brand-500: #4318ff;
-  /* Primary Brand Blue */
-  --color-brand-600: #3211d0;
-  --color-brand-700: #2509a2;
-  --color-brand-800: #190793;
-  --color-brand-900: #11047a;
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
 
-  /* Neutrals & Navy (Dark Mode Foundations) */
-  --color-navy-50: #d0dcfb;
-  --color-navy-100: #aac0fe;
-  --color-navy-200: #a3b9f8;
-  --color-navy-300: #728fea;
-  --color-navy-400: #3652ba;
-  --color-navy-500: #1b3bbb;
-  --color-navy-600: #24388a;
-  --color-navy-700: #1b254b;
-  --color-navy-800: #111c44;
-  /* Card Background */
-  --color-navy-900: #0b1437;
-  /* Body Background */
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
 
-  --color-secondary-gray-100: #e0e5f2;
-  --color-secondary-gray-200: #e1e9f8;
-  --color-secondary-gray-300: #f4f7fe;
-  --color-secondary-gray-400: #e9edf7;
-  --color-secondary-gray-500: #8f9bba;
-  --color-secondary-gray-600: #a3aed0;
-  /* Muted Text */
-  --color-secondary-gray-700: #707eae;
-  --color-secondary-gray-800: #4a5568;
-  --color-secondary-gray-900: #1b2559;
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
-  /* Semantic Overrides */
-  --color-primary: var(--color-brand-500);
-  --color-primary-hover: var(--color-brand-600);
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  /* Radii */
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-3xl: 20px;
-  --radius-premium: 30px;
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
 
-  /* Shadows - Horizon UI Premium Elevation */
-  --shadow-premium: 0px 18px 40px rgba(112, 144, 176, 0.12);
-  --shadow-navbar: 10px 10px 20px rgba(112, 144, 176, 0.08);
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius: 0.625rem;
 }
+
+/* ─── Runtime theme values (switch per light/dark) ──────────── */
 
 @layer base {
   :root {
+    color-scheme: light;
+
+    /* Page background: clearly grey — distinct from white card */
+    --background: 220 20% 94%;
+    --foreground: 224 71% 4%;
+
+    /* Card: pure white — visually pops from the grey page */
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    /* Royal Blue accent */
+    --primary: 204 88% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 91%;
+    --secondary-foreground: 224 71% 4%;
+
+    --muted: 220 14% 91%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 220 14% 88%;
+    --accent-foreground: 224 71% 4%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 86%;
+    --input: 220 13% 86%;
+    --ring: 204 88% 45%;
+
+    /* Subtle dot-grid: light */
+    --grid-color: hsl(220 13% 80% / 0.7);
+    --grid-size: 28px;
+  }
+
+  .dark {
     color-scheme: dark;
-    --background: var(--color-navy-900);
-    --foreground: #ffffff;
+
+    /* Page background: deep blue-black */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    /* Card: meaningfully lighter — matches shadcn dark reference */
+    --card: 220 47% 9%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 220 47% 10%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 204 80% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 47% 14%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 222 47% 13%;
+    --muted-foreground: 215 16% 57%;
+
+    --accent: 222 47% 15%;
+    --accent-foreground: 213 31% 91%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 213 31% 91%;
+
+    --border: 222 47% 16%;
+    --input: 222 47% 16%;
+    --ring: 204 80% 52%;
+
+    /* Subtle dot-grid: dark */
+    --grid-color: hsl(222 47% 18% / 0.5);
+    --grid-size: 28px;
+  }
+
+  * {
+    border-color: hsl(var(--border));
   }
 
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.5px;
-  }
-
-  /* Custom selection color */
-  ::selection {
-    background-color: var(--color-brand-300);
-    color: #ffffff;
+    background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
   }
 }
 
-@layer components {
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
 
-  /* Premium Blur Effect for Navbar */
-  .glass-card {
-    background: rgba(17, 28, 68, 0.7);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
 
-  .premium-card {
-    background-color: var(--color-navy-800);
-    border-radius: var(--radius-3xl);
-    box-shadow: var(--shadow-premium);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --sidebar-width: 14rem;
+  --sidebar-width-mobile: 16rem;
+  --sidebar-width-icon: 3rem;
 }

@@ -9,7 +9,6 @@ import {
     Send,
     ArrowRight,
     ArrowLeft,
-    Headphones,
     CheckCircle2,
     Rocket,
     Sparkles,
@@ -18,8 +17,14 @@ import {
     Check,
     Radio,
     Zap,
+    Loader2,
 } from "lucide-react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { getOnboardingData, registerGroup, checkGroupSignal } from "./actions";
 
 type Platform = "whatsapp" | "telegram" | null;
@@ -33,28 +38,24 @@ interface OnboardingData {
     botLink: string | null;
 }
 
-const STEPS = ["Plataforma", "Instrução", "Sinal", "Pronto"];
+const STEPS = ["Platform", "Setup", "Verify", "Done"];
 
 function ProgressBar({ step }: { step: number }) {
     return (
-        <div className="flex items-center gap-2 w-full max-w-md mx-auto mb-10">
+        <div className="flex items-center gap-0 mb-8 max-w-sm mx-auto">
             {STEPS.map((label, i) => (
                 <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
-                    <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/5">
-                        <motion.div
-                            className={`h-full rounded-full ${i <= step
-                                ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                                : "bg-white/5"
-                                }`}
-                            initial={{ width: "0%" }}
-                            animate={{ width: i <= step ? "100%" : "0%" }}
-                            transition={{ duration: 0.5, delay: i * 0.1 }}
-                        />
+                    <div className="relative w-full">
+                        <div className="h-1 bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                                className={i <= step ? "h-full bg-primary" : "h-full bg-transparent"}
+                                initial={{ width: "0%" }}
+                                animate={{ width: i <= step ? "100%" : "0%" }}
+                                transition={{ duration: 0.4, delay: i * 0.05 }}
+                            />
+                        </div>
                     </div>
-                    <span
-                        className={`text-[10px] font-bold uppercase tracking-wider ${i <= step ? "text-emerald-400" : "text-secondary-gray-600"
-                            }`}
-                    >
+                    <span className={`text-[10px] font-medium ${i <= step ? "text-primary" : "text-muted-foreground"}`}>
                         {label}
                     </span>
                 </div>
@@ -63,74 +64,57 @@ function ProgressBar({ step }: { step: number }) {
     );
 }
 
-function StepPlatform({
-    onSelect,
-}: {
-    onSelect: (p: Platform) => void;
-}) {
+function StepPlatform({ onSelect }: { onSelect: (p: Platform) => void }) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            className="space-y-8"
-        >
-            <div className="text-center space-y-3">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
+            <div className="text-center space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Conectar Grupo
+                    Setup
                 </div>
-                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                    Qual plataforma seu grupo usa?
-                </h1>
-                <p className="text-secondary-gray-400 text-sm max-w-md mx-auto">
-                    Escolha onde o Agno vai monitorar e proteger sua comunidade.
+                <h1 className="text-2xl font-semibold text-foreground">Choose your platform</h1>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Select the messaging platform where your community lives.
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
                 <motion.button
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onSelect("whatsapp")}
-                    className="group relative p-8 rounded-3xl bg-navy-800 border border-white/5 hover:border-green-500/30 transition-all duration-300 text-left cursor-pointer"
+                    className="group p-6 rounded-xl bg-card border border-border hover:border-green-500/40 hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-all text-left cursor-pointer"
                 >
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative space-y-4">
-                        <div className="h-14 w-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                            <MessageSquare className="h-7 w-7 text-green-500" />
+                    <div className="space-y-4">
+                        <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black text-white">WhatsApp</h3>
-                            <p className="text-sm text-secondary-gray-400 mt-1">
-                                Grupos do WhatsApp Business API
-                            </p>
+                            <h3 className="text-sm font-semibold text-foreground">WhatsApp</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">Business API</p>
                         </div>
-                        <div className="flex items-center gap-1.5 text-green-400 text-xs font-bold">
-                            Selecionar <ArrowRight className="h-3.5 w-3.5" />
+                        <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                            Connect <ArrowRight className="h-3.5 w-3.5" />
                         </div>
                     </div>
                 </motion.button>
 
                 <motion.button
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => onSelect("telegram")}
-                    className="group relative p-8 rounded-3xl bg-navy-800 border border-white/5 hover:border-sky-500/30 transition-all duration-300 text-left cursor-pointer"
+                    className="group p-6 rounded-xl bg-card border border-border hover:border-sky-500/40 hover:bg-sky-50/50 dark:hover:bg-sky-900/10 transition-all text-left cursor-pointer"
                 >
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative space-y-4">
-                        <div className="h-14 w-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
-                            <Send className="h-7 w-7 text-sky-500" />
+                    <div className="space-y-4">
+                        <div className="h-10 w-10 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                            <Send className="h-5 w-5 text-sky-600 dark:text-sky-400" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black text-white">Telegram</h3>
-                            <p className="text-sm text-secondary-gray-400 mt-1">
-                                Grupos e supergrupos do Telegram
-                            </p>
+                            <h3 className="text-sm font-semibold text-foreground">Telegram</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">Group / Supergroup</p>
                         </div>
-                        <div className="flex items-center gap-1.5 text-sky-400 text-xs font-bold">
-                            Selecionar <ArrowRight className="h-3.5 w-3.5" />
+                        <div className="flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 font-medium">
+                            Connect <ArrowRight className="h-3.5 w-3.5" />
                         </div>
                     </div>
                 </motion.button>
@@ -140,25 +124,12 @@ function StepPlatform({
 }
 
 function StepInstruction({
-    platform,
-    data,
-    groupName,
-    setGroupName,
-    groupDescription,
-    setGroupDescription,
-    onNext,
-    onBack,
-    error,
+    platform, data, groupName, setGroupName, groupDescription, setGroupDescription,
+    onNext, onBack, error,
 }: {
-    platform: Platform;
-    data: OnboardingData;
-    groupName: string;
-    setGroupName: (v: string) => void;
-    groupDescription: string;
-    setGroupDescription: (v: string) => void;
-    onNext: () => void;
-    onBack: () => void;
-    error: string | null;
+    platform: Platform; data: OnboardingData; groupName: string; setGroupName: (v: string) => void;
+    groupDescription: string; setGroupDescription: (v: string) => void;
+    onNext: () => void; onBack: () => void; error: string | null;
 }) {
     const [copied, setCopied] = useState(false);
     const isWhatsApp = platform === "whatsapp";
@@ -172,229 +143,112 @@ function StepInstruction({
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            className="space-y-8 max-w-xl mx-auto"
-        >
-            <div className="text-center space-y-3">
-                <div
-                    className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${isWhatsApp
-                        ? "bg-green-500/10 border border-green-500/20 text-green-400"
-                        : "bg-sky-500/10 border border-sky-500/20 text-sky-400"
-                        }`}
-                >
-                    {isWhatsApp ? (
-                        <MessageSquare className="h-3.5 w-3.5" />
-                    ) : (
-                        <Send className="h-3.5 w-3.5" />
-                    )}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-xl mx-auto">
+            <div className="text-center space-y-2">
+                <Badge variant="secondary" className="gap-1.5">
+                    {isWhatsApp ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
                     {isWhatsApp ? "WhatsApp" : "Telegram"}
-                </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                    Configure seu grupo
-                </h1>
+                </Badge>
+                <h1 className="text-2xl font-semibold text-foreground">Configure your community</h1>
             </div>
 
-            <PremiumCard className="p-6 space-y-5">
-                {/* Group name input */}
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-secondary-gray-400 uppercase tracking-wider block mb-2">
-                            Nome do Grupo
-                        </label>
-
-                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3 mb-3">
-                            <div className="mt-0.5 text-amber-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
-                            </div>
-                            <p className="text-sm text-amber-200">
-                                <span className="font-bold">CRÍTICO:</span> O nome deve ser <span className="underline decoration-amber-500 font-black">EXATAMENTE</span> igual ao nome do grupo no WhatsApp (incluindo emojis e espaços). Sem isso, as mensagens não serão vinculadas.
-                            </p>
-                        </div>
-
-                        <input
-                            type="text"
-                            value={groupName}
-                            onChange={(e) => setGroupName(e.target.value)}
-                            placeholder="Ex: Comunidade Premium 2025"
-                            className={`w-full bg-navy-950 border rounded-xl px-4 py-3 text-white placeholder:text-secondary-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors text-sm ${error ? "border-red-500/50" : "border-white/10"
-                                }`}
-                        />
-                        {error && (
-                            <p className="text-red-400 text-sm font-semibold mt-2 flex items-center gap-1.5">
-                                <span className="block h-1.5 w-1.5 rounded-full bg-red-500" />
-                                {error}
-                            </p>
-                        )}
+            <PremiumCard className="p-5 space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="groupName">Community name</Label>
+                    <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                        <span className="font-semibold">Important:</span> The name must match the group name exactly, including special characters and spaces.
                     </div>
-
-                    <div>
-                        <label className="text-xs font-bold text-secondary-gray-400 uppercase tracking-wider block mb-2">
-                            Objetivo da Comunidade
-                        </label>
-                        <textarea
-                            value={groupDescription}
-                            onChange={(e) => setGroupDescription(e.target.value)}
-                            placeholder="Descreva o objetivo da comunidade para ajudar a IA a gerar insights melhores..."
-                            rows={3}
-                            className="w-full bg-navy-950 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-secondary-gray-600 focus:outline-none focus:border-emerald-500/50 transition-colors text-sm resize-none"
-                        />
-                    </div>
+                    <Input
+                        id="groupName"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        placeholder="My community name"
+                        className={error ? "border-destructive" : ""}
+                    />
+                    {error && <p className="text-xs text-destructive">{error}</p>}
                 </div>
 
-                {/* Platform-specific instructions */}
-                <div className="space-y-4">
-                    <label className="text-xs font-bold text-secondary-gray-400 uppercase tracking-wider">
-                        Instruções
-                    </label>
+                <div className="space-y-2">
+                    <Label htmlFor="desc">Description (optional)</Label>
+                    <Textarea
+                        id="desc"
+                        value={groupDescription}
+                        onChange={(e) => setGroupDescription(e.target.value)}
+                        placeholder="What is this community about?"
+                        rows={3}
+                        className="resize-none"
+                    />
+                </div>
+
+                <div className="pt-2 border-t border-border space-y-3">
+                    <p className="text-sm font-medium text-foreground">Setup instructions</p>
 
                     {isWhatsApp ? (
-                        <div className="p-5 rounded-2xl bg-navy-950 border border-green-500/10 space-y-4">
-                            <div className="flex items-start gap-3">
-                                <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                                    <span className="text-sm font-black text-green-500">1</span>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-white font-semibold">
-                                        Adicione este número ao seu grupo:
-                                    </p>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <code className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 font-mono text-sm font-bold">
-                                            {number}
-                                        </code>
-                                        <button
-                                            onClick={handleCopy}
-                                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                                        >
-                                            {copied ? (
-                                                <Check className="h-4 w-4 text-green-500" />
-                                            ) : (
-                                                <Copy className="h-4 w-4 text-secondary-gray-500" />
-                                            )}
-                                        </button>
+                        <div className="space-y-3">
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                                <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">1</span>
+                                <div className="flex-1 space-y-2">
+                                    <p className="text-xs text-muted-foreground">Add this number to your WhatsApp group as admin:</p>
+                                    <div className="flex items-center gap-2">
+                                        <code className="flex-1 text-sm font-mono text-foreground bg-muted px-3 py-1.5 rounded border">{number}</code>
+                                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
+                                            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="flex items-start gap-3">
-                                <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                                    <span className="text-sm font-black text-green-500">2</span>
-                                </div>
-                                <p className="text-sm text-white font-semibold">
-                                    Promova-o a <span className="text-green-400">Admin</span> do grupo.
-                                </p>
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                                <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">2</span>
+                                <p className="text-xs text-muted-foreground">Grant <span className="font-semibold text-foreground">admin privileges</span> to the number after adding it.</p>
                             </div>
                         </div>
                     ) : (
-                        <div className="p-6 rounded-2xl bg-navy-950 border border-sky-500/10 space-y-5">
-                            {/* Step 1: Open Bot */}
-                            <div className="flex items-start gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
-                                    <span className="text-sm font-black text-sky-500">1</span>
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className="text-sm text-white font-black uppercase tracking-tight">
-                                        Iniciar Bot
-                                    </p>
-                                    <p className="text-xs text-secondary-gray-500 leading-relaxed italic">
-                                        Clique no botão abaixo para abrir o bot oficial do Agno no seu Telegram.
-                                    </p>
-                                    {botLink ? (
-                                        <div className="flex items-center gap-2 mt-3">
-                                            <a
-                                                href={botLink.startsWith("http") ? botLink : `https://${botLink}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-sky-600 transition-all shadow-lg shadow-sky-500/20"
-                                            >
-                                                <ExternalLink className="h-3.5 w-3.5" />
-                                                Conversar com Agno
-                                            </a>
-                                            <button
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(botLink);
-                                                    setCopied(true);
-                                                    setTimeout(() => setCopied(false), 2000);
-                                                }}
-                                                className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-secondary-gray-400 hover:text-white transition-all cursor-pointer"
-                                                title="Copiar Link"
-                                            >
-                                                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                                            </button>
+                        <div className="space-y-3">
+                            {[
+                                {
+                                    step: "1", content: botLink ? (
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm" asChild className="gap-1.5 h-7 text-xs">
+                                                <a href={botLink.startsWith("http") ? botLink : `https://${botLink}`} target="_blank" rel="noopener noreferrer">
+                                                    <ExternalLink className="h-3 w-3" /> Open bot
+                                                </a>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(botLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                                                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                            </Button>
                                         </div>
-                                    ) : (
-                                        <p className="text-xs text-amber-500 font-bold flex items-center gap-1 mt-2">
-                                            <Zap className="h-3.5 w-3.5" /> Link do bot pendente de configuração global.
-                                        </p>
-                                    )}
+                                    ) : <p className="text-xs text-amber-600 dark:text-amber-400">Bot link not configured yet.</p>, label: "Click the bot link to open it in Telegram"
+                                },
+                                { step: "2", label: "Add the bot to your group using \"Add to Group\"" },
+                                { step: "3", label: "Make the bot an admin for full access" },
+                            ].map((item, idx) => (
+                                <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                                    <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">{item.step}</span>
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                                        {item.content}
+                                    </div>
                                 </div>
-                            </div>
-
-                            {/* Step 2: Add to Group */}
-                            <div className="flex items-start gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
-                                    <span className="text-sm font-black text-sky-500">2</span>
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className="text-sm text-white font-black uppercase tracking-tight">
-                                        Adicionar ao Grupo
-                                    </p>
-                                    <p className="text-xs text-secondary-gray-500 leading-relaxed">
-                                        No perfil do bot, use a opção <span className="text-sky-400 font-bold">"Adicionar ao Grupo"</span> e selecione a comunidade que deseja monitorar.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Step 3: Make Admin */}
-                            <div className="flex items-start gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20">
-                                    <span className="text-sm font-black text-sky-500">3</span>
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className="text-sm text-white font-black uppercase tracking-tight">
-                                        Promover a Admin
-                                    </p>
-                                    <p className="text-xs text-secondary-gray-500 leading-relaxed">
-                                        Dentro do grupo, torne o Agno <span className="text-sky-400 font-bold">Administrador</span>. Isso é necessário para que a IA processe as mensagens e gere seus resumos.
-                                    </p>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     )}
                 </div>
             </PremiumCard>
 
             <div className="flex items-center justify-between">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-secondary-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-semibold cursor-pointer"
-                >
-                    <ArrowLeft className="h-4 w-4" /> Voltar
-                </button>
-                <button
-                    onClick={onNext}
-                    disabled={!groupName.trim()}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                >
-                    Continuar <ArrowRight className="h-4 w-4" />
-                </button>
+                <Button variant="ghost" onClick={onBack} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+                <Button onClick={onNext} disabled={!groupName.trim()} className="gap-2">
+                    Continue <ArrowRight className="h-4 w-4" />
+                </Button>
             </div>
         </motion.div>
     );
 }
 
-function StepListening({
-    groupId,
-    externalId,
-    onConnected,
-    onBack,
-}: {
-    groupId: string | null;
-    externalId: string | null;
-    onConnected: () => void;
-    onBack: () => void;
+function StepListening({ groupId, externalId, onConnected, onBack }: {
+    groupId: string | null; externalId: string | null; onConnected: () => void; onBack: () => void;
 }) {
     const [seconds, setSeconds] = useState(0);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -403,181 +257,107 @@ function StepListening({
     const poll = useCallback(async () => {
         if (!groupId) return;
         const result = await checkGroupSignal(groupId);
-        if (result.connected) {
-            onConnected();
-        }
+        if (result.connected) onConnected();
     }, [groupId, onConnected]);
 
     useEffect(() => {
         if (!groupId) return;
-
-        intervalRef.current = setInterval(() => {
-            poll();
-            setSeconds((s) => s + 3);
-        }, 3000);
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
+        intervalRef.current = setInterval(() => { poll(); setSeconds(s => s + 3); }, 3000);
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, [groupId, poll]);
 
-    const formatTime = (s: number) => {
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
-        return `${m}:${sec.toString().padStart(2, "0")}`;
-    };
+    const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
     const handleCopyCode = () => {
-        if (externalId) {
-            navigator.clipboard.writeText(externalId);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
+        if (externalId) { navigator.clipboard.writeText(externalId); setCopied(true); setTimeout(() => setCopied(false), 2000); }
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            className="space-y-8 max-w-lg mx-auto text-center"
-        >
-            <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-black uppercase tracking-wider">
-                    <Radio className="h-3.5 w-3.5" />
-                    Aguardando Identificação
-                </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                    Envie o código no grupo
-                </h1>
-                <p className="text-secondary-gray-400 text-sm max-w-sm mx-auto">
-                    Para confirmar que o grupo é seu, envie a mensagem abaixo no grupo onde o bot é Admin.
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-sm mx-auto text-center">
+            <div className="space-y-2">
+                <Badge variant="secondary" className="gap-1.5">
+                    <Radio className="h-3 w-3 animate-pulse text-amber-500" />
+                    Listening...
+                </Badge>
+                <h1 className="text-2xl font-semibold text-foreground">Verification</h1>
+                <p className="text-sm text-muted-foreground">
+                    Send this code in your group to verify the connection.
                 </p>
             </div>
 
-            <PremiumCard className="p-8 space-y-6">
-                {/* Verification Code Display */}
-                <div className="bg-navy-950 border border-white/10 rounded-xl p-4 flex flex-col items-center gap-3">
-                    <span className="text-xs font-bold text-secondary-gray-500 uppercase tracking-wider">Seu Código de Verificação</span>
-                    <div className="flex items-center gap-3">
-                        <code className="text-2xl font-mono font-black text-emerald-400 tracking-wider">
-                            {externalId || "..."}
+            <PremiumCard className="p-6 space-y-5">
+                <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Verification code</p>
+                    <div className="flex items-center gap-2">
+                        <code className="flex-1 text-2xl font-mono font-semibold text-foreground text-center bg-muted rounded-lg py-3">
+                            {externalId || "—"}
                         </code>
-                        <button
-                            onClick={handleCopyCode}
-                            className="p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer text-secondary-gray-400 hover:text-white"
-                            title="Copiar código"
-                        >
-                            {copied ? <Check className="h-5 w-5 text-emerald-500" /> : <Copy className="h-5 w-5" />}
-                        </button>
+                        <Button variant="outline" size="icon" onClick={handleCopyCode} className="shrink-0">
+                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-6">
-                    {/* Pulse animation */}
+                <div className="flex flex-col items-center gap-3">
                     <div className="relative">
-                        <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <Headphones className="h-8 w-8 text-emerald-400" />
+                        <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+                            <Radio className="h-7 w-7 text-muted-foreground animate-pulse" />
                         </div>
                         <motion.div
-                            className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
-                            animate={{ scale: [1, 1.4, 1.4], opacity: [0.6, 0, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                            className="absolute inset-0 rounded-full border border-primary/40"
+                            animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
                         />
                     </div>
-
-                    <div className="space-y-1">
-                        <p className="text-secondary-gray-500 text-xs font-bold uppercase tracking-wider">
-                            Aguardando mensagem...
-                        </p>
-                        <p className="text-xl font-mono font-black text-white tabular-nums">
-                            {formatTime(seconds)}
-                        </p>
-                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">
+                        {formatTime(seconds)} elapsed
+                    </p>
                 </div>
             </PremiumCard>
 
-            <button
-                onClick={onBack}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-secondary-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-semibold mx-auto cursor-pointer"
-            >
-                <ArrowLeft className="h-4 w-4" /> Voltar
-            </button>
+            <Button variant="ghost" onClick={onBack} className="gap-2 mx-auto">
+                <ArrowLeft className="h-4 w-4" /> Back
+            </Button>
         </motion.div>
     );
 }
 
 function StepWelcome() {
     const router = useRouter();
-
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-8 max-w-lg mx-auto text-center"
-        >
-            <div className="space-y-3">
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-black uppercase tracking-wider"
-                >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Conectado
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-sm mx-auto text-center">
+            <div className="space-y-2">
+                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Connected
                 </motion.div>
-                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                    Tudo pronto! 🎉
-                </h1>
-                <p className="text-secondary-gray-400 text-sm max-w-sm mx-auto">
-                    O Agno está processando seus dados. Você receberá resumos e alertas na
-                    sua <span className="text-white font-bold">Central de Inteligência</span> em breve.
-                </p>
+                <h1 className="text-2xl font-semibold text-foreground">You're all set!</h1>
+                <p className="text-sm text-muted-foreground">Your community is now connected and being monitored by IgnoHub AI.</p>
             </div>
 
-            <PremiumCard className="p-8">
-                <div className="flex flex-col items-center gap-6">
-                    <motion.div
-                        initial={{ rotate: -10, scale: 0.8 }}
-                        animate={{ rotate: 0, scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, delay: 0.4 }}
-                        className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center"
-                    >
-                        <Rocket className="h-10 w-10 text-emerald-400" />
+            <PremiumCard className="p-6">
+                <div className="flex flex-col items-center gap-5">
+                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <Rocket className="h-8 w-8 text-primary" />
                     </motion.div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-left">
-                            <Zap className="h-5 w-5 text-amber-400 shrink-0" />
-                            <p className="text-sm text-secondary-gray-300">
-                                <span className="text-white font-bold">Resumos automáticos</span>{" "}
-                                — compilados por IA ao longo do dia.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-left">
-                            <Zap className="h-5 w-5 text-red-400 shrink-0" />
-                            <p className="text-sm text-secondary-gray-300">
-                                <span className="text-white font-bold">Alertas de risco</span>{" "}
-                                — detecção automática de conteúdo sensível.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3 text-left">
-                            <Zap className="h-5 w-5 text-sky-400 shrink-0" />
-                            <p className="text-sm text-secondary-gray-300">
-                                <span className="text-white font-bold">Insights de membros</span>{" "}
-                                — análise de engajamento e sentimento.
-                            </p>
-                        </div>
+                    <div className="space-y-2 w-full">
+                        {[
+                            { icon: Zap, label: "Automated AI summaries", color: "text-primary" },
+                            { icon: Zap, label: "Real-time alert detection", color: "text-destructive" },
+                            { icon: Zap, label: "Behavioral insights engine", color: "text-sky-500" },
+                        ].map(({ icon: Icon, label, color }) => (
+                            <div key={label} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
+                                <Icon className={`h-4 w-4 ${color} shrink-0`} />
+                                <p className="text-sm text-foreground">{label}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </PremiumCard>
 
-            <button
-                onClick={() => router.push("/dashboard")}
-                className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold text-sm hover:opacity-90 transition-opacity cursor-pointer"
-            >
-                Ir para o Dashboard <ArrowRight className="h-4 w-4" />
-            </button>
+            <Button onClick={() => router.push("/dashboard")} className="w-full gap-2">
+                Go to dashboard <ArrowRight className="h-4 w-4" />
+            </Button>
         </motion.div>
     );
 }
@@ -596,103 +376,46 @@ export default function OnboardingPage() {
     const [externalId, setExternalId] = useState<string | null>(null);
 
     useEffect(() => {
-        getOnboardingData().then((d) => {
-            setData(d);
-            setLoading(false);
-        });
+        getOnboardingData().then(d => { setData(d); setLoading(false); });
     }, []);
 
-    const handlePlatformSelect = (p: Platform) => {
-        setPlatform(p);
-        setStep(1);
-    };
+    const handlePlatformSelect = (p: Platform) => { setPlatform(p); setStep(1); };
 
     const handleStartListening = async () => {
         if (!organization || !data || !platform) return;
         setRegistering(true);
         setError(null);
-
-        const result = await registerGroup({
-            name: groupName,
-            description: groupDescription,
-            platform,
-            organizationId: organization.id,
-        });
-
-        if (result.error) {
-            setError(result.error);
-            setRegistering(false);
-            return;
-        }
-
-        if (result.groupId) {
-            setGroupId(result.groupId);
-            setExternalId(result.externalId); // Save external ID
-            setStep(2);
-        }
+        const result = await registerGroup({ name: groupName, description: groupDescription, platform, organizationId: organization.id });
+        if (result.error) { setError(result.error); setRegistering(false); return; }
+        if (result.groupId) { setGroupId(result.groupId); setExternalId(result.externalId); setStep(2); }
         setRegistering(false);
     };
 
     if (loading || orgLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full"
-                />
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8 md:py-14">
+        <div className="max-w-2xl mx-auto px-4 py-8">
             <ProgressBar step={step} />
-
             <AnimatePresence mode="wait">
-                {step === 0 && (
-                    <StepPlatform key="platform" onSelect={handlePlatformSelect} />
-                )}
-
+                {step === 0 && <StepPlatform key="platform" onSelect={handlePlatformSelect} />}
                 {step === 1 && data && (
-                    <StepInstruction
-                        key="instruction"
-                        platform={platform}
-                        data={data}
-                        groupName={groupName}
-                        setGroupName={setGroupName}
-                        groupDescription={groupDescription}
-                        setGroupDescription={setGroupDescription}
-                        onNext={handleStartListening}
-                        onBack={() => setStep(0)}
-                        error={error}
-                    />
+                    <StepInstruction key="instruction" platform={platform} data={data} groupName={groupName} setGroupName={setGroupName} groupDescription={groupDescription} setGroupDescription={setGroupDescription} onNext={handleStartListening} onBack={() => setStep(0)} error={error} />
                 )}
-
-                {step === 2 && (
-                    <StepListening
-                        key="listening"
-                        groupId={groupId}
-                        externalId={externalId}
-                        onConnected={() => setStep(3)}
-                        onBack={() => setStep(1)}
-                    />
-                )}
-
+                {step === 2 && <StepListening key="listening" groupId={groupId} externalId={externalId} onConnected={() => setStep(3)} onBack={() => setStep(1)} />}
                 {step === 3 && <StepWelcome key="welcome" />}
             </AnimatePresence>
 
             {registering && (
-                <div className="fixed inset-0 bg-navy-950/80 backdrop-blur-sm flex items-center justify-center z-50">
-                    <PremiumCard className="p-8 text-center space-y-4 max-w-xs">
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto"
-                        />
-                        <p className="text-sm text-white font-semibold">
-                            Registrando grupo...
-                        </p>
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                    <PremiumCard className="p-8 text-center space-y-3 max-w-xs">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                        <p className="text-sm text-muted-foreground">Registering your community...</p>
                     </PremiumCard>
                 </div>
             )}

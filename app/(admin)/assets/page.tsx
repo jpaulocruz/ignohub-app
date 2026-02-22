@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, ReactNode, ReactElement, cloneElement } from "react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import {
     Smartphone,
@@ -27,7 +27,9 @@ import {
     Save,
     Star,
     MessageSquare,
-    Lightbulb
+    Lightbulb,
+    ArrowUpRight,
+    Trash
 } from "lucide-react";
 import {
     getOutboundMeta,
@@ -62,16 +64,41 @@ import {
     setSystemBot
 } from "./actions";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 type TabId = "collection" | "official" | "telegram" | "monitor" | "messages" | "prompts";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
-    { id: "collection", label: "WhatsApp Collection", icon: <QrCode className="h-4 w-4" />, color: "green" },
-    { id: "official", label: "WhatsApp Official", icon: <Send className="h-4 w-4" />, color: "emerald" },
-    { id: "messages", label: "Gestão de Mensagens", icon: <MessageSquare className="h-4 w-4" />, color: "brand" },
-    { id: "telegram", label: "Telegram", icon: <Bot className="h-4 w-4" />, color: "blue" },
-    { id: "prompts", label: "Prompts do Sistema", icon: <Brain className="h-4 w-4" />, color: "pink" },
-    { id: "monitor", label: "Monitor IA", icon: <Activity className="h-4 w-4" />, color: "amber" },
+interface TabItem {
+    id: TabId;
+    label: string;
+    icon: ReactNode;
+    activeColor: string;
+    activeBg: string;
+}
+
+interface TabGroup {
+    title: string;
+    items: TabItem[];
+}
+
+const TAB_GROUPS: TabGroup[] = [
+    {
+        title: "Channels",
+        items: [
+            { id: "collection", label: "WhatsApp Collection", icon: <QrCode className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
+            { id: "official", label: "WhatsApp Official", icon: <Send className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
+            { id: "telegram", label: "Telegram Unit", icon: <Bot className="h-4 w-4" />, activeColor: "text-sky-600 dark:text-sky-400", activeBg: "bg-sky-100 dark:bg-sky-900/30" },
+        ],
+    },
+    {
+        title: "Intelligence",
+        items: [
+            { id: "messages", label: "Message Protocol", icon: <MessageSquare className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
+            { id: "prompts", label: "Neural Prompts", icon: <Brain className="h-4 w-4" />, activeColor: "text-amber-600 dark:text-amber-400", activeBg: "bg-amber-100 dark:bg-amber-900/30" },
+            { id: "monitor", label: "Intelligence Monitor", icon: <Activity className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
+        ],
+    },
 ];
 
 export default function AdminAssetsPage() {
@@ -119,81 +146,95 @@ export default function AdminAssetsPage() {
     const evolutionInstances = instances.filter((i) => i.provider === "evolution");
     const telegramInstances = instances.filter((i) => i.provider === "telegram");
 
-    const tabColorMap: Record<string, string> = {
-        green: "bg-green-500", emerald: "bg-emerald-500", blue: "bg-blue-500", amber: "bg-amber-500", brand: "bg-brand-500", pink: "bg-pink-500",
-    };
-
     return (
-        <div className="space-y-8 pb-20">
-            <header className="space-y-2">
-                <div className="flex items-center gap-3 mb-2">
-                    <span className="px-3 py-1 bg-brand-500/10 text-brand-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-brand-500/20">
-                        Painel Super Admin
-                    </span>
-                </div>
-                <h1 className="text-5xl font-black text-white tracking-tighter leading-none">Gestão de Assets</h1>
-                <p className="text-secondary-gray-500 font-medium text-lg">
-                    Canais de coleta, credenciais de entrega e consumo de IA.
+        <div className="space-y-6 pb-12">
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Asset registry</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Manage ingestion channels, delivery credentials, and AI consumption metrics.
                 </p>
-            </header>
-
-            {/* Tab Navigation */}
-            <div className="flex gap-1 p-1.5 bg-navy-900/50 rounded-2xl border border-white/5 overflow-x-auto">
-                {TABS.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === tab.id
-                            ? "bg-navy-800 text-white shadow-lg border border-white/10"
-                            : "text-secondary-gray-500 hover:text-white hover:bg-navy-800/50"
-                            }`}
-                    >
-                        {tab.icon}
-                        {tab.label}
-                        {activeTab === tab.id && (
-                            <div className={`h-1.5 w-1.5 rounded-full ${tabColorMap[tab.color]} animate-pulse`} />
-                        )}
-                    </button>
-                ))}
             </div>
 
-            {/* Tab Content */}
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -12 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    {loading ? <LoadingSkeleton /> : (
-                        <>
-                            {activeTab === "collection" && (
-                                <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} />
+            <div className="flex flex-col lg:flex-row gap-10">
+                {/* Section Navigation */}
+                <aside className="lg:w-56 shrink-0">
+                    <PremiumCard className="p-2 space-y-1">
+                        {TAB_GROUPS.map((group, gi) => (
+                            <div key={group.title}>
+                                {gi > 0 && <Separator className="my-2" />}
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2 pb-1.5">
+                                    {group.title}
+                                </p>
+                                {group.items.map((tab) => {
+                                    const isActive = activeTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={cn(
+                                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all cursor-pointer",
+                                                isActive
+                                                    ? "bg-primary/5 dark:bg-primary/10 border-l-2 border-primary text-foreground font-semibold"
+                                                    : "border-l-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "flex items-center justify-center h-7 w-7 rounded-md shrink-0 transition-colors",
+                                                isActive ? cn(tab.activeBg, tab.activeColor) : "bg-muted text-muted-foreground"
+                                            )}>
+                                                {tab.icon}
+                                            </div>
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </PremiumCard>
+                </aside>
+
+                {/* Main Content Area */}
+                <main className="flex-1 min-w-0">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {loading ? (
+                                <LoadingSkeleton />
+                            ) : (
+                                <div className="space-y-6">
+                                    {activeTab === "collection" && (
+                                        <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} />
+                                    )}
+                                    {activeTab === "official" && (
+                                        <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} />
+                                    )}
+                                    {activeTab === "telegram" && (
+                                        <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} />
+                                    )}
+                                    {activeTab === "messages" && (
+                                        <MessagesTab
+                                            templates={templates}
+                                            globalTemplateSettings={globalTemplateSettings}
+                                            onRefresh={fetchAll}
+                                        />
+                                    )}
+                                    {activeTab === "monitor" && (
+                                        <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} />
+                                    )}
+                                    {activeTab === "prompts" && (
+                                        <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} />
+                                    )}
+                                </div>
                             )}
-                            {activeTab === "official" && (
-                                <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} />
-                            )}
-                            {activeTab === "telegram" && (
-                                <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} />
-                            )}
-                            {activeTab === "messages" && (
-                                <MessagesTab
-                                    templates={templates}
-                                    globalTemplateSettings={globalTemplateSettings}
-                                    onRefresh={fetchAll}
-                                />
-                            )}
-                            {activeTab === "monitor" && (
-                                <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} />
-                            )}
-                            {activeTab === "prompts" && (
-                                <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} />
-                            )}
-                        </>
-                    )}
-                </motion.div>
-            </AnimatePresence>
+                        </motion.div>
+                    </AnimatePresence>
+                </main>
+            </div>
         </div>
     );
 }
@@ -204,7 +245,7 @@ function LoadingSkeleton() {
     return (
         <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-navy-900/50 rounded-2xl animate-pulse border border-white/5" />
+                <div key={i} className="h-32 bg-muted rounded-xl animate-pulse" />
             ))}
         </div>
     );
@@ -407,10 +448,10 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "open": return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20", label: "Conectado" };
-            case "connecting": return { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20", label: "Conectando..." };
-            case "qr_ready": return { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20", label: "Aguardando QR" };
-            default: return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20", label: "Desconectado" };
+            case "open": return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20", label: "Operational" };
+            case "connecting": return { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20", label: "Syncing..." };
+            case "qr_ready": return { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20", label: "Pending Auth" };
+            default: return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20", label: "Dormant" };
         }
     };
 
@@ -429,11 +470,11 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                     <button
                         onClick={() => setEditingConfig(false)}
                         disabled={configStatus === "missing"}
-                        className={`p-2 hover:bg-white/5 rounded-lg transition-colors ${configStatus === "missing" ? "hidden" : ""}`}
+                        className={`p-2 hover:bg-background/80 rounded-lg transition-colors border border-card-border ${configStatus === "missing" ? "hidden" : ""}`}
                     >
-                        <ArrowLeft className="h-5 w-5 text-secondary-gray-400" />
+                        <ArrowLeft className="h-5 w-5 text-text-muted hover:text-foreground" />
                     </button>
-                    <h2 className="text-xl font-bold text-white">Configuração Evolution API</h2>
+                    <h2 className="text-xl font-bold text-foreground">Configuração Evolution API</h2>
                 </div>
 
                 <PremiumCard className="p-8 space-y-6">
@@ -449,29 +490,29 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-secondary-gray-400">URL da API</label>
+                            <label className="text-sm font-medium text-text-muted">URL da API</label>
                             <div className="relative">
-                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-secondary-gray-500" />
+                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
                                 <input
                                     type="text"
                                     value={configForm.url}
                                     onChange={(e) => setConfigForm(prev => ({ ...prev, url: e.target.value }))}
                                     placeholder="https://api.seudominio.com"
-                                    className="w-full bg-navy-900/50 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-secondary-gray-600 focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-all outline-none"
+                                    className="w-full bg-background border border-card-border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-text-muted focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-all outline-none"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-secondary-gray-400">Global API Key</label>
+                            <label className="text-sm font-medium text-text-muted">Global API Key</label>
                             <div className="relative">
-                                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-secondary-gray-500" />
+                                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
                                 <input
                                     type="text"
                                     value={configForm.apiKey}
                                     onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
                                     placeholder="Ex: 44299384-..."
-                                    className="w-full bg-navy-900/50 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-secondary-gray-600 focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-all outline-none"
+                                    className="w-full bg-background border border-card-border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-text-muted focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-all outline-none"
                                 />
                             </div>
                         </div>
@@ -491,16 +532,16 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                         <button
                             onClick={handleTestConnection}
                             disabled={connTest.status === "testing" || !configForm.url || !configForm.apiKey}
-                            className="bg-white/5 hover:bg-white/10 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                            className="bg-background border border-card-border hover:bg-background/80 text-foreground font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
                         >
                             Testar Conexão
                         </button>
                         <button
                             onClick={handleSaveConfig}
                             disabled={saving || !configForm.url || !configForm.apiKey}
-                            className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="bg-brand-500 hover:bg-brand-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                            {saving ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {saving ? "Salvando..." : "Salvar Configuração"}
                         </button>
                     </div>
@@ -533,10 +574,9 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                     <StatCard icon={<Activity />} color="green" label="Grupos WhatsApp" value={loadStats.platformCounts?.whatsapp || 0} sub="coletando mensagens" />
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                     {connTest.message && connTest.status !== "idle" && (
-                        <div className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold ${connTest.status === "success" ? "bg-green-500/10 text-green-500" : connTest.status === "error" ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"}`}>
+                        <div className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-semibold ${connTest.status === "success" ? "bg-green-500/10 text-green-600 dark:text-green-500" : connTest.status === "error" ? "bg-red-500/10 text-red-600 dark:text-red-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-500"}`}>
                             {connTest.status === "testing" && <RefreshCw className="h-3 w-3 animate-spin" />}
                             {connTest.message}
                         </div>
@@ -544,14 +584,14 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                     <button
                         onClick={handleTestConnection}
                         disabled={connTest.status === "testing"}
-                        className="p-2.5 bg-navy-900/80 hover:bg-navy-800 text-secondary-gray-400 hover:text-white rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer"
+                        className="p-2.5 bg-background hover:bg-background/80 text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer"
                         title="Testar Conexão API"
                     >
                         <Activity className={`h-4 w-4 ${connTest.status === "testing" ? "animate-pulse" : ""}`} />
                     </button>
                     <button
                         onClick={() => setEditingConfig(true)}
-                        className="p-2.5 bg-navy-900/80 hover:bg-navy-800 text-secondary-gray-400 hover:text-white rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer"
+                        className="p-2.5 bg-background hover:bg-background/80 text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer"
                         title="Configurações da API"
                     >
                         <Settings className="h-4 w-4" />
@@ -559,7 +599,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                     <button
                         onClick={handleSync}
                         disabled={syncing}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-navy-900/80 hover:bg-navy-800 text-sm font-bold text-secondary-gray-400 hover:text-white rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-background/80 text-sm font-medium text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer disabled:opacity-50"
                     >
                         <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                         {syncing ? "Sincronizando..." : "Sincronizar"}
@@ -567,44 +607,46 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                 </div>
             </div>
 
-            {/* Instance List */}
             <div className="space-y-4">
                 {instances.map((inst) => {
                     const statusInfo = getStatusColor(inst.status);
                     return (
-                        <PremiumCard key={inst.id} className="p-5">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className={`h-12 w-12 rounded-xl ${statusInfo.bg} flex items-center justify-center border ${statusInfo.border} shrink-0`}>
-                                        <QrCode className={`h-6 w-6 ${statusInfo.text}`} />
+                        <PremiumCard key={inst.id} className="p-0 border border-white/5 rounded-sm overflow-hidden bg-navy-950/20 group">
+                            <div className="p-6 flex items-center justify-between gap-6 bg-transparent border-l-2 border-l-brand-500 hover:bg-white/5 transition-all">
+                                <div className="flex items-center gap-5 min-w-0">
+                                    <div className={cn(
+                                        "h-10 w-10 rounded-sm flex items-center justify-center border",
+                                        statusInfo.bg, statusInfo.border
+                                    )}>
+                                        <QrCode className={cn("h-5 w-5", statusInfo.text)} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-lg font-black text-white truncate">{inst.instance_name}</p>
-                                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                        <p className="text-[13px] font-black text-white uppercase tracking-widest truncate">{inst.instance_name}</p>
+                                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                             {/* Connection State Badge */}
-                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${statusInfo.bg} border ${statusInfo.border}`}>
-                                                <div className={`h-1.5 w-1.5 rounded-full ${statusInfo.text.replace("text-", "bg-")} ${inst.status === "open" ? "animate-pulse" : ""}`} />
-                                                <span className={`text-[10px] font-black uppercase ${statusInfo.text}`}>{statusInfo.label}</span>
+                                            <div className={cn("flex items-center gap-2 px-3 py-1 rounded-none border", statusInfo.bg, statusInfo.border)}>
+                                                <div className={cn("h-1.5 w-1.5 bg-current", inst.status === "open" ? "animate-pulse" : "")} />
+                                                <span className={cn("text-[9px] font-black uppercase tracking-[0.2em]", statusInfo.text)}>{statusInfo.label}</span>
                                             </div>
-                                            <span className="text-xs font-bold text-secondary-gray-500">
-                                                {inst.groups_count ?? 0} grupo{(inst.groups_count ?? 0) !== 1 ? "s" : ""}
+                                            <span className="text-[9px] font-black text-secondary-gray-500 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none uppercase tracking-widest">
+                                                {inst.groups_count ?? 0} Unit{(inst.groups_count ?? 0) !== 1 ? "s" : ""} Synced
                                             </span>
                                             {inst.instance_key && (
-                                                <span className="text-[10px] font-mono text-secondary-gray-600">
-                                                    ID: {inst.instance_key.slice(0, 12)}...
+                                                <span className="text-[9px] font-black text-secondary-gray-600 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none font-mono tracking-tight uppercase">
+                                                    ID: {inst.instance_key.slice(0, 12)}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-2.5 shrink-0">
                                     {/* Connect / Generate QR */}
                                     {inst.status !== "open" && (
                                         <button
                                             onClick={() => handleConnect(inst)}
-                                            className="p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors cursor-pointer"
-                                            title="Gerar QR Code"
+                                            className="p-3 rounded-sm border border-green-500/20 bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors cursor-pointer"
+                                            title="Protocol Link (QR)"
                                         >
                                             <QrCode className="h-4 w-4" />
                                         </button>
@@ -613,8 +655,8 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                     {inst.qr_code_base64 && inst.status !== "open" && (
                                         <button
                                             onClick={() => handleOpenQr(inst)}
-                                            className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
-                                            title="Ver QR Code (Atualizar)"
+                                            className="p-3 rounded-sm border border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
+                                            title="Inspect QR"
                                         >
                                             <Eye className="h-4 w-4" />
                                         </button>
@@ -624,22 +666,28 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                             await setSystemBot(inst.id, "admin_collection_instances");
                                             onRefresh();
                                         }}
-                                        className={`p-2.5 rounded-xl transition-colors cursor-pointer ${inst.is_system_bot ? "bg-brand-500/20 text-brand-500" : "bg-white/5 text-secondary-gray-500 hover:text-brand-500 hover:bg-brand-500/5"}`}
-                                        title={inst.is_system_bot ? "Bot do Sistema Ativo" : "Definir como Bot do Sistema"}
+                                        className={cn(
+                                            "p-3 rounded-sm border transition-all cursor-pointer",
+                                            inst.is_system_bot ? "bg-brand-500/10 text-brand-500 border-brand-500/30" : "bg-navy-950 border-white/5 text-secondary-gray-600 hover:text-brand-500 hover:border-brand-500/30"
+                                        )}
+                                        title={inst.is_system_bot ? "System Core Active" : "Map to System Core"}
                                     >
-                                        <Star className={`h-4 w-4 ${inst.is_system_bot ? "fill-current" : ""}`} />
+                                        <Star className={cn("h-4 w-4", inst.is_system_bot ? "fill-current" : "")} />
                                     </button>
                                     <button
                                         onClick={() => handleToggle(inst.id, inst.is_active)}
-                                        className={`p-2.5 rounded-xl transition-colors cursor-pointer ${inst.is_active ? "bg-green-500/10 text-green-500 hover:bg-red-500/10 hover:text-red-500" : "bg-red-500/10 text-red-500 hover:bg-green-500/10 hover:text-green-500"}`}
-                                        title={inst.is_active ? "Desativar" : "Ativar"}
+                                        className={cn(
+                                            "p-3 rounded-sm border transition-all cursor-pointer",
+                                            inst.is_active ? "bg-green-500/5 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "bg-red-500/5 border-red-500/20 text-red-500 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500"
+                                        )}
+                                        title={inst.is_active ? "Terminate Protocol" : "Initialize Protocol"}
                                     >
                                         <Power className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(inst)}
-                                        className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
-                                        title="Remover da Evolution + DB"
+                                        className="p-3 rounded-sm border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                        title="Purge Identity"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
@@ -652,52 +700,51 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
             {/* New Instance Form */}
             {showNewForm ? (
-                <PremiumCard className="p-6 border-2 border-dashed border-green-500/20">
-                    <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
-                        <Plus className="h-5 w-5 text-green-500" /> Nova Instância Evolution
+                <PremiumCard className="p-8 border-2 border-dashed border-green-500/30 bg-green-500/5 rounded-none">
+                    <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3 uppercase tracking-tighter">
+                        <Plus className="h-6 w-6 text-green-500" /> New Registry Unit
                     </h3>
-                    <p className="text-sm text-secondary-gray-500 mb-4">
-                        A instância será criada na Evolution API com recebimento de mensagens de grupos ativado automaticamente.
+                    <p className="text-[11px] font-medium text-secondary-gray-500 mb-6 uppercase tracking-widest bg-navy-950/40 p-3 border border-white/5">
+                        Initialize a sovereign ingestion channel. Automated group message synchronization protocol will be applied on discovery.
                     </p>
-                    <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-1.5 block">Nome da Instância</label>
+                    <div className="space-y-4">
+                        <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Unit Identity (Lowercase / Kebab Only)</label>
                         <input
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
-                            placeholder="ex: ignohub-collection-01"
-                            className="w-full max-w-md bg-navy-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-secondary-gray-600 focus:border-green-500/50 focus:outline-none transition-colors"
+                            placeholder="ex: unit-alpha-registry"
+                            className="w-full max-w-md bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-green-500/50 outline-none transition-all"
                             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                         />
-                        <p className="text-xs text-secondary-gray-600 mt-1.5">Use letras minúsculas, números e hífens. Ex: meu-bot-01</p>
                     </div>
-                    <div className="flex items-center gap-3 mt-5">
+                    <div className="flex items-center gap-4 mt-8">
                         <button
                             onClick={handleCreate}
                             disabled={saving || !newName.trim()}
-                            className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                            className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer flex items-center gap-3"
                         >
                             {saving ? (
-                                <><RefreshCw className="h-4 w-4 animate-spin" /> Criando na Evolution...</>
+                                <><RefreshCw className="h-4 w-4 animate-spin" /> Synchronizing...</>
                             ) : (
-                                <><Plus className="h-4 w-4" /> Criar Instância</>
+                                <><Plus className="h-4 w-4" /> Initialize Unit</>
                             )}
                         </button>
                         <button
                             onClick={() => { setShowNewForm(false); setError(null); }}
-                            className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-secondary-gray-400 text-sm font-bold rounded-xl transition-colors cursor-pointer"
+                            className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer"
                         >
-                            Cancelar
+                            Abort
                         </button>
                     </div>
                 </PremiumCard>
             ) : (
                 <button
                     onClick={() => setShowNewForm(true)}
-                    className="w-full p-5 border-2 border-dashed border-white/10 rounded-2xl hover:border-green-500/30 transition-colors group cursor-pointer"
+                    className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-green-500/30 transition-all group cursor-pointer bg-navy-950/20"
                 >
-                    <div className="flex items-center justify-center gap-3 text-secondary-gray-500 group-hover:text-green-500 transition-colors">
-                        <Plus className="h-5 w-5" />
-                        <span className="text-sm font-bold">Criar Nova Instância Evolution</span>
+                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-green-500 transition-colors">
+                        <Plus className="h-6 w-6" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Initialize New Unit Channel</span>
                     </div>
                 </button>
             )}
@@ -716,48 +763,48 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-navy-900 border border-white/10 rounded-3xl p-8 max-w-sm w-full"
+                            className="bg-background border border-card-border rounded-2xl p-8 max-w-sm w-full shadow-lg"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-black text-white">QR Code</h3>
-                                <button onClick={handleCloseQrModal} className="p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
-                                    <X className="h-5 w-5 text-secondary-gray-400" />
+                                <h3 className="text-xl font-bold text-foreground">QR Code</h3>
+                                <button onClick={handleCloseQrModal} className="p-2 rounded-lg hover:bg-card-hover transition-colors cursor-pointer text-text-muted hover:text-foreground">
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
 
-                            <p className="text-sm font-bold text-secondary-gray-400 mb-4">{qrModal.name}</p>
+                            <p className="text-sm font-medium text-text-muted mb-4">{qrModal.name}</p>
 
                             {qrModal.state === "open" ? (
                                 <div className="text-center py-8">
                                     <div className="h-16 w-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
                                         <Check className="h-8 w-8 text-green-500" />
                                     </div>
-                                    <p className="text-lg font-black text-green-500">Conectado!</p>
-                                    <p className="text-sm text-secondary-gray-500 mt-2">WhatsApp vinculado com sucesso.</p>
-                                    <p className="text-xs text-secondary-gray-600 mt-1">Mensagens de grupos estão sendo coletadas.</p>
+                                    <p className="text-lg font-bold text-green-600 dark:text-green-500">Conectado!</p>
+                                    <p className="text-sm text-text-muted mt-2">WhatsApp vinculado com sucesso.</p>
+                                    <p className="text-xs text-text-muted mt-1">Mensagens de grupos estão sendo coletadas.</p>
                                 </div>
                             ) : (
                                 <>
-                                    <div className="bg-white rounded-2xl p-6 flex items-center justify-center min-h-[250px]">
+                                    <div className="bg-white rounded-xl p-6 flex items-center justify-center min-h-[250px] border border-gray-200">
                                         {qrModal.loading ? (
                                             <div className="py-8 text-center">
-                                                <RefreshCw className="h-8 w-8 text-navy-900 animate-spin mx-auto mb-3" />
-                                                <p className="text-navy-900 font-bold text-sm">Gerando novo QR Code...</p>
+                                                <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-3" />
+                                                <p className="text-gray-600 font-medium text-sm">Gerando novo QR Code...</p>
                                             </div>
                                         ) : qrModal.error ? (
                                             <div className="text-center py-8">
                                                 <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3" />
-                                                <p className="text-red-500 font-bold text-sm">{qrModal.error}</p>
+                                                <p className="text-red-600 font-medium text-sm">{qrModal.error}</p>
                                                 <button
                                                     onClick={() => qrModal.name && qrModal.dbId && handleOpenQr({ instance_name: qrModal.name, id: qrModal.dbId, status: qrModal.state })}
-                                                    className="mt-4 px-4 py-2 bg-navy-900 text-white text-xs font-bold rounded-lg hover:bg-navy-800 transition-colors"
+                                                    className="mt-4 px-4 py-2 bg-background border border-card-border text-foreground text-sm font-medium rounded-lg hover:bg-card-hover transition-colors cursor-pointer"
                                                 >
                                                     Tentar Novamente
                                                 </button>
                                             </div>
                                         ) : qrModal.qr ? (
-                                            <img src={qrModal.qr.startsWith("data:") ? qrModal.qr : `data:image/png;base64,${qrModal.qr}`} alt="QR Code" className="w-full h-auto" />
+                                            <img src={qrModal.qr.startsWith("data:") ? qrModal.qr : `data:image/png;base64,${qrModal.qr}`} alt="QR Code" className="w-full h-auto rounded-lg" />
                                         ) : (
                                             <div className="py-8 text-center">
                                                 <p className="text-gray-500 text-sm">Nenhum QR Code disponível.</p>
@@ -767,12 +814,12 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
                                     <div className="flex items-center justify-center gap-2 mt-4">
                                         <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                                        <p className="text-xs text-secondary-gray-500">
+                                        <p className="text-xs text-text-muted">
                                             Aguardando escaneamento... (verificando a cada 5s)
                                         </p>
                                     </div>
 
-                                    <p className="text-xs text-secondary-gray-600 text-center mt-2">
+                                    <p className="text-xs text-text-muted text-center mt-2">
                                         Abra o WhatsApp → Menu → Aparelhos conectados → Conectar
                                     </p>
                                 </>
@@ -783,18 +830,18 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             </AnimatePresence>
 
             {/* Info Card */}
-            <PremiumCard className="p-5 bg-gradient-to-r from-green-500/5 to-transparent border-green-500/10">
+            <PremiumCard className="p-5 bg-green-500/5 border border-green-500/10">
                 <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20 shrink-0 mt-0.5">
-                        <Shield className="h-5 w-5 text-green-500" />
+                    <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20 shrink-0 mt-0.5">
+                        <Shield className="h-5 w-5 text-green-600 dark:text-green-500" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-white">Configuração Automática</p>
-                        <p className="text-xs text-secondary-gray-500 mt-1">
+                        <p className="text-sm font-semibold text-foreground">Configuração Automática</p>
+                        <p className="text-xs text-text-muted mt-1 leading-relaxed">
                             Ao criar uma instância, as seguintes configurações são aplicadas automaticamente:
-                            <strong className="text-green-400"> groupsIgnore: false</strong> (mensagens de grupo ativadas),
-                            <strong className="text-amber-400"> rejectCall: true</strong>,
-                            <strong className="text-secondary-gray-400"> alwaysOnline: true</strong>.
+                            <strong className="text-green-600 dark:text-green-500 font-medium"> groupsIgnore: false</strong> (mensagens de grupo ativadas),
+                            <strong className="text-amber-600 dark:text-amber-500 font-medium"> rejectCall: true</strong>,
+                            <strong className="text-foreground font-medium"> alwaysOnline: true</strong>.
                         </p>
                     </div>
                 </div>
@@ -825,11 +872,11 @@ function OfficialTab({ configs, loadStats, onRefresh }: { configs: any[]; loadSt
             ) : (
                 <button
                     onClick={() => setShowNew(true)}
-                    className="w-full p-5 border-2 border-dashed border-white/10 rounded-2xl hover:border-emerald-500/30 transition-colors group cursor-pointer"
+                    className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-emerald-500/30 transition-all group cursor-pointer bg-navy-950/20"
                 >
-                    <div className="flex items-center justify-center gap-3 text-secondary-gray-500 group-hover:text-emerald-500 transition-colors">
-                        <Plus className="h-5 w-5" />
-                        <span className="text-sm font-bold">Cadastrar Novo Número Meta</span>
+                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-emerald-500 transition-colors">
+                        <Plus className="h-6 w-6" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Authorize New Meta Protocol</span>
                     </div>
                 </button>
             )}
@@ -879,60 +926,70 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
     };
 
     return (
-        <PremiumCard className={`p-6 ${isNew ? "border-2 border-dashed border-emerald-500/20" : ""}`}>
+        <PremiumCard className={`p-5 bg-card hover:border-brand-300 transition-all ${isNew ? "border-2 border-dashed border-emerald-200" : "border border-border"}`}>
             <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-sm bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                         <Shield className="h-5 w-5 text-emerald-500" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-white">
-                            {isNew ? "Novo Número" : (config.display_number || config.phone_number_id)}
+                        <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
+                            {isNew ? "New Meta Protocol" : (config.display_number || config.phone_number_id)}
                         </h3>
-                        {!isNew && <StatusBadge active={config.is_active} />}
+                        <div className="flex items-center gap-3 mt-2">
+                            {!isNew && <StatusBadge active={config.is_active} />}
+                            {!isNew && (
+                                <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 rounded-none border border-white/5">
+                                    {groupCount} Unit Syncs
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 {!isNew && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-secondary-gray-500 bg-navy-950 px-3 py-1.5 rounded-lg border border-white/5">
-                            {groupCount} grupos
-                        </span>
+                    <div className="flex items-center gap-2.5">
                         <button
                             onClick={async () => {
                                 if (!config?.id) return;
                                 await setSystemBot(config.id, "admin_outbound_meta");
                                 onRefresh();
                             }}
-                            className={`p-2 rounded-xl transition-colors cursor-pointer ${config?.is_system_bot ? "bg-brand-500/20 text-brand-500" : "bg-white/5 text-secondary-gray-500 hover:text-brand-500 hover:bg-brand-500/5"}`}
-                            title={config?.is_system_bot ? "Bot do Sistema Ativo" : "Definir como Bot do Sistema"}
+                            className={cn(
+                                "p-3 rounded-sm border transition-all cursor-pointer",
+                                config?.is_system_bot ? "bg-brand-500/10 text-brand-500 border-brand-500/30" : "bg-navy-950 border-white/5 text-secondary-gray-600 hover:text-brand-500 hover:border-brand-500/30"
+                            )}
+                            title={config?.is_system_bot ? "System Core Active" : "Map to System Core"}
                         >
-                            <Star className={`h-4 w-4 ${config?.is_system_bot ? "fill-current" : ""}`} />
+                            <Star className={cn("h-4 w-4", config?.is_system_bot ? "fill-current" : "")} />
                         </button>
-                        <button onClick={handleToggle} className={`p-2 rounded-xl transition-colors cursor-pointer ${config.is_active ? "bg-green-500/10 text-green-500 hover:bg-red-500/10 hover:text-red-500" : "bg-red-500/10 text-red-500 hover:bg-green-500/10 hover:text-green-500"}`}>
+                        <button onClick={handleToggle} className={cn(
+                            "p-3 rounded-sm border transition-all cursor-pointer",
+                            config.is_active ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500"
+                        )}>
                             <Power className="h-4 w-4" />
                         </button>
-                        <button onClick={handleDelete} className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer">
+                        <button onClick={handleDelete} className="p-3 rounded-sm bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer">
                             <Trash2 className="h-4 w-4" />
                         </button>
                     </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <InputField label="Phone Number ID" value={form.phone_number_id} onChange={(v) => setForm({ ...form, phone_number_id: v })} placeholder="123456789" />
                 <InputField label="WABA ID" value={form.waba_id} onChange={(v) => setForm({ ...form, waba_id: v })} placeholder="1234567890" />
                 <InputField label="Display Number" value={form.display_number} onChange={(v) => setForm({ ...form, display_number: v })} placeholder="+55 11 99999-0000" />
                 <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-1.5 block">Access Token</label>
+                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1 mb-2 block">Cryptographic Access Token</label>
                     <div className="relative">
                         <input
                             type={showToken ? "text" : "password"}
                             value={form.access_token}
                             onChange={(e) => setForm({ ...form, access_token: e.target.value })}
                             placeholder="EAAxxxxxxx..."
-                            className="w-full bg-navy-950 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder:text-secondary-gray-600 focus:border-emerald-500/50 focus:outline-none transition-colors font-mono"
+                            className="w-full bg-navy-950/40 border border-white/5 rounded-none px-4 py-4 pr-12 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 focus:outline-none transition-all font-mono"
                         />
-                        <button onClick={() => setShowToken(!showToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-gray-500 hover:text-white cursor-pointer">
+                        <button onClick={() => setShowToken(!showToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-gray-600 hover:text-white cursor-pointer transition-colors p-2 rounded-sm hover:bg-white/5">
                             {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                     </div>
@@ -940,22 +997,29 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
             </div>
 
             {config?.verify_token && (
-                <div className="mt-4 flex items-center gap-3 p-3 bg-navy-950 rounded-xl border border-white/5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500">Verify Token:</span>
-                    <code className="text-xs text-white font-mono flex-1">{config.verify_token}</code>
-                    <button onClick={copyVerifyToken} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
-                        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5 text-secondary-gray-500" />}
+                <div className="mt-8 flex items-center gap-6 p-6 bg-navy-950/40 border border-white/5 rounded-none group">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.2em] mb-2">Protocol Verify Token</span>
+                        <code className="text-[13px] text-brand-500 font-mono font-black tracking-tight truncate max-w-sm uppercase">{config.verify_token}</code>
+                    </div>
+                    <button onClick={copyVerifyToken} className="ml-auto p-3 rounded-none hover:bg-brand-500/10 text-secondary-gray-600 hover:text-brand-500 transition-all cursor-pointer border border-transparent hover:border-brand-500/20">
+                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
                 </div>
             )}
 
-            <div className="flex items-center gap-3 mt-5">
-                <button onClick={handleSave} disabled={saving} className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
-                    {saving ? "Salvando..." : "Salvar"}
+            <div className="flex items-center gap-4 mt-10 pt-8 border-t border-white/5">
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
+                >
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? "Synchronizing..." : "Authorize Registry"}
                 </button>
                 {isNew && onCancel && (
-                    <button onClick={onCancel} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-secondary-gray-400 text-sm font-bold rounded-xl transition-colors cursor-pointer">
-                        Cancelar
+                    <button onClick={onCancel} className="px-10 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
+                        Abort
                     </button>
                 )}
             </div>
@@ -995,33 +1059,38 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
 
             {/* Existing Telegram Instances */}
             {instances.map((inst) => (
-                <PremiumCard key={inst.id} className="p-5">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
-                            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
+                <PremiumCard key={inst.id} className="p-0 border border-white/5 rounded-none overflow-hidden bg-navy-950/20 group">
+                    <div className="p-6 flex items-center justify-between gap-6 border-l-2 border-l-blue-500 hover:bg-white/5 transition-all">
+                        <div className="flex items-center gap-5 min-w-0">
+                            <div className="h-12 w-12 rounded-sm bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
                                 <Bot className="h-6 w-6 text-blue-500" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-lg font-black text-white truncate">{inst.instance_name}</p>
-                                <div className="flex items-center gap-3 mt-1">
+                                <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none truncate">{inst.instance_name}</p>
+                                <div className="flex items-center gap-3 mt-2.5">
                                     <StatusBadge active={inst.is_active} />
-                                    <span className="text-xs font-bold text-secondary-gray-500">{inst.groups_count} grupos</span>
+                                    <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 border border-white/5">{inst.groups_count} Unit Syncs</span>
                                 </div>
                                 {inst.instance_key && (
-                                    <p className="text-xs text-secondary-gray-600 font-mono mt-1 truncate">Token: ••••{inst.instance_key.slice(-8)}</p>
+                                    <p className="text-[10px] text-secondary-gray-700 font-mono mt-2 tracking-tight uppercase">Protocol: ••••{inst.instance_key.slice(-8)}</p>
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2.5 shrink-0">
                             <button
                                 onClick={async () => { await toggleCollectionStatus(inst.id, inst.is_active); onRefresh(); }}
-                                className={`p-2.5 rounded-xl transition-colors cursor-pointer ${inst.is_active ? "bg-blue-500/10 text-blue-500 hover:bg-red-500/10 hover:text-red-500" : "bg-red-500/10 text-red-500 hover:bg-blue-500/10 hover:text-blue-500"}`}
+                                className={cn(
+                                    "p-3 rounded-none border transition-all cursor-pointer",
+                                    inst.is_active ? "bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20" : "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/20"
+                                )}
+                                title={inst.is_active ? "Dormant" : "Awaken"}
                             >
                                 <Power className="h-4 w-4" />
                             </button>
                             <button
-                                onClick={async () => { if (confirm("Remover?")) { await deleteCollectionInstance(inst.id); onRefresh(); } }}
-                                className="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                onClick={async () => { if (confirm("Purge Unit Identity?")) { await deleteCollectionInstance(inst.id); onRefresh(); } }}
+                                className="p-3 rounded-none bg-red-500/5 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer"
+                                title="Purge"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </button>
@@ -1032,7 +1101,7 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
 
             {/* Agent Presets with Edit Option */}
             <div className="space-y-3">
-                <h3 className="text-sm font-black text-secondary-gray-400 uppercase tracking-widest">Presets do Sistema</h3>
+                <h3 className="text-sm font-semibold text-text-muted tracking-wide">Presets do Sistema</h3>
                 {presets.map((preset) => (
                     <PresetCard key={preset.id} preset={preset} onRefresh={onRefresh} />
                 ))}
@@ -1040,28 +1109,28 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
 
             {/* New Telegram Bot */}
             {showNewBot ? (
-                <PremiumCard className="p-6 border-2 border-dashed border-blue-500/20">
-                    <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
-                        <Plus className="h-5 w-5 text-blue-500" /> Novo Bot Telegram
+                <PremiumCard className="p-8 border-2 border-dashed border-blue-500/30 bg-blue-500/5 rounded-none">
+                    <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tighter">
+                        <Plus className="h-6 w-6 text-blue-500" /> New Telegram Bot Instance
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputField label="Nome do Bot" value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot Principal" />
-                        <InputField label="Bot Token" value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField label="Bot Unit Identity" value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
+                        <InputField label="Cryptographic Bot Token" value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
                     </div>
-                    <div className="flex items-center gap-3 mt-5">
-                        <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
-                            {saving ? "Salvando..." : "Criar Bot"}
+                    <div className="flex items-center gap-4 mt-8">
+                        <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer">
+                            {saving ? "Synchronizing..." : "Initialize Bot Unit"}
                         </button>
-                        <button onClick={() => setShowNewBot(false)} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-secondary-gray-400 text-sm font-bold rounded-xl transition-colors cursor-pointer">
-                            Cancelar
+                        <button onClick={() => setShowNewBot(false)} className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
+                            Abort
                         </button>
                     </div>
                 </PremiumCard>
             ) : (
-                <button onClick={() => setShowNewBot(true)} className="w-full p-5 border-2 border-dashed border-white/10 rounded-2xl hover:border-blue-500/30 transition-colors group cursor-pointer">
-                    <div className="flex items-center justify-center gap-3 text-secondary-gray-500 group-hover:text-blue-500 transition-colors">
-                        <Plus className="h-5 w-5" />
-                        <span className="text-sm font-bold">Adicionar Bot Telegram</span>
+                <button onClick={() => setShowNewBot(true)} className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-blue-500/30 transition-all group cursor-pointer bg-navy-950/20">
+                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-blue-500 transition-colors">
+                        <Plus className="h-6 w-6" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Initialize New Telegram Unit</span>
                     </div>
                 </button>
             )}
@@ -1089,76 +1158,75 @@ function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void 
             onRefresh();
         } catch (e) {
             console.error(e);
-            alert("Erro ao salvar preset");
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <PremiumCard className="p-4 border-l-4 border-l-blue-500/50">
+        <PremiumCard className="p-0 border-l-2 border-l-brand-500 bg-navy-950/20 border-white/5 hover:bg-white/5 transition-all rounded-none overflow-hidden">
             {editing ? (
-                <div className="space-y-4">
+                <div className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-white">{preset.name}</h4>
-                        <button onClick={() => setEditing(false)} className="p-1 hover:bg-white/10 rounded">
-                            <X className="h-4 w-4 text-secondary-gray-400" />
+                        <h4 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{preset.name}</h4>
+                        <button onClick={() => setEditing(false)} className="p-2 hover:bg-white/5 rounded-none transition-colors text-secondary-gray-600 hover:text-white">
+                            <X className="h-4 w-4" />
                         </button>
                     </div>
 
                     <InputField
-                        label="Bot Link (t.me/...)"
+                        label="Unified Bot Link (t.me/)"
                         value={form.bot_link}
                         onChange={(v) => setForm({ ...form, bot_link: v })}
-                        placeholder="https://t.me/SeuBot"
+                        placeholder="https://t.me/UnitAlpha"
                     />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                         <InputField
-                            label="Username (@bot)"
+                            label="Operational Alias (@)"
                             value={form.telegram_bot_username}
                             onChange={(v) => setForm({ ...form, telegram_bot_username: v })}
-                            placeholder="SeuBot"
+                            placeholder="UnitAlphaBot"
                         />
                         <InputField
-                            label="WhatsApp Support"
+                            label="WhatsApp Liaison"
                             value={form.whatsapp_support_number}
                             onChange={(v) => setForm({ ...form, whatsapp_support_number: v })}
                             placeholder="5511999999999"
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-3 pt-2">
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                            className="px-6 py-3 bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest rounded-none hover:bg-brand-600 disabled:opacity-50 transition-all"
                         >
-                            {saving ? "Salvando..." : "Salvar Alterações"}
+                            {saving ? "Synchronizing..." : "Update Protocol"}
                         </button>
                     </div>
                 </div>
             ) : (
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-white">{preset.name}</p>
-                            <button onClick={() => setEditing(true)} className="p-1 hover:bg-white/10 rounded cursor-pointer text-secondary-gray-500 hover:text-white transition-colors">
-                                <Settings className="h-3 w-3" />
+                <div className="p-6 flex items-center justify-between gap-6">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-3">
+                            <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{preset.name}</p>
+                            <button onClick={() => setEditing(true)} className="p-2 hover:bg-white/5 rounded-none cursor-pointer text-secondary-gray-600 hover:text-white transition-all">
+                                <Settings className="h-4 w-4" />
                             </button>
                         </div>
                         {preset.bot_link ? (
-                            <a href={preset.bot_link} target="_blank" rel="noreferrer" className="text-xs text-blue-400 font-mono mt-0.5 hover:underline block">
-                                {preset.bot_link}
+                            <a href={preset.bot_link} target="_blank" rel="noreferrer" className="text-[10px] font-black text-brand-500 hover:text-brand-400 transition-colors flex items-center gap-2 mt-2 uppercase tracking-widest">
+                                {preset.bot_link} <ArrowUpRight className="h-3 w-3" />
                             </a>
                         ) : (
-                            <p className="text-[10px] text-orange-400 mt-0.5">Sem link configurado</p>
+                            <p className="text-[10px] font-black text-amber-500/60 mt-2 uppercase tracking-widest italic">Protocol Missing Link</p>
                         )}
-                        {preset.telegram_bot_username && <p className="text-xs text-secondary-gray-500 mt-0.5">@{preset.telegram_bot_username}</p>}
+                        {preset.telegram_bot_username && <p className="text-[10px] font-black text-secondary-gray-600 mt-1 uppercase tracking-widest">@{preset.telegram_bot_username}</p>}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-6 shrink-0">
                         <div className="text-right hidden sm:block">
-                            <p className="text-[10px] text-secondary-gray-500 uppercase tracking-widest">Preserve Context</p>
-                            <p className="text-xs font-bold text-white">{preset.preserve_context ? "Sim" : "Não"}</p>
+                            <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-widest mb-1">Context Integrity</p>
+                            <p className="text-[11px] font-black text-white uppercase tracking-tighter">{preset.preserve_context ? "Operational" : "Detached"}</p>
                         </div>
                         <StatusBadge active={preset.is_active} />
                     </div>
@@ -1186,42 +1254,47 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
                     <StatCard icon={<AlertTriangle />} color="amber" label="Top Consumidor" value={usage[0]?.name || "—"} sub={usage[0] ? `${usage[0].tokens.toLocaleString()} tokens` : ""} />
                 </div>
 
-                <PremiumCard className="p-6">
-                    <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-amber-500" />
-                        Consumo de Tokens por Canal
+                <PremiumCard className="p-8 bg-navy-950/20 border border-white/5 rounded-none">
+                    <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3 uppercase tracking-tighter">
+                        <Brain className="h-6 w-6 text-amber-500" />
+                        Channel Ingestion Invariant Metrics
                     </h3>
 
                     {usage.length === 0 ? (
-                        <div className="text-center py-12">
-                            <Brain className="h-12 w-12 text-secondary-gray-700 mx-auto mb-3" />
-                            <p className="text-secondary-gray-500 font-bold">Nenhum consumo registrado</p>
-                            <p className="text-secondary-gray-600 text-sm mt-1">Os dados aparecerão após o processamento dos primeiros batches.</p>
+                        <div className="text-center py-16 bg-navy-950/40 border border-dashed border-white/5 rounded-none">
+                            <Brain className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
+                            <p className="text-white font-black uppercase tracking-widest text-[11px]">No Ingestion Recorded</p>
+                            <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose">Metrics will populate upon first protocol execution.</p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-6">
                             {usage.map((item, i) => (
                                 <div key={i} className="group">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${item.platform === "whatsapp"
-                                                ? "bg-green-500/10 text-green-500 border border-green-500/20"
-                                                : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
-                                                }`}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <span className={cn(
+                                                "px-2 py-1 rounded-none text-[8px] font-black uppercase tracking-[0.2em] border",
+                                                item.platform === "whatsapp"
+                                                    ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                    : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                            )}>
                                                 {item.platform === "whatsapp" ? "WA" : "TG"}
                                             </span>
-                                            <span className="text-sm font-bold text-white truncate">{item.name}</span>
+                                            <span className="text-[11px] font-black text-white truncate uppercase tracking-widest">{item.name}</span>
                                         </div>
-                                        <span className="text-xs font-black text-secondary-gray-400 tabular-nums shrink-0">
-                                            {item.tokens.toLocaleString()} tokens
+                                        <span className="text-[10px] font-mono font-black text-secondary-gray-500 tabular-nums shrink-0">
+                                            {item.tokens.toLocaleString()} TOKENS
                                         </span>
                                     </div>
-                                    <div className="h-2.5 bg-navy-950 rounded-full overflow-hidden border border-white/5">
+                                    <div className="h-1 bg-white/5 rounded-none overflow-hidden">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${(item.tokens / maxTokens) * 100}%` }}
-                                            transition={{ duration: 0.8, delay: i * 0.05 }}
-                                            className={`h-full rounded-full ${platformColors[item.platform] || "bg-amber-500"}`}
+                                            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: i * 0.1 }}
+                                            className={cn(
+                                                "h-full",
+                                                item.platform === "whatsapp" ? "bg-green-500" : "bg-blue-500"
+                                            )}
                                         />
                                     </div>
                                 </div>
@@ -1232,14 +1305,14 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
             </div>
 
             {/* AI Config Section */}
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+            <div className="space-y-8">
+                <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
+                    <h2 className="text-xl font-black text-white tracking-widest flex items-center gap-4 uppercase">
                         <Settings className="h-6 w-6 text-brand-500" />
-                        Configuração de IA (Global)
+                        Neural Protocol Keys
                     </h2>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
-                        System Settings
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-secondary-gray-600 px-4 py-1.5 border border-white/5 rounded-none">
+                        Core Override
                     </span>
                 </div>
 
@@ -1279,16 +1352,16 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
                     </div>
                 </div>
 
-                <PremiumCard className="p-5 bg-gradient-to-r from-blue-500/5 to-transparent border-blue-500/10">
-                    <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0 mt-0.5">
-                            <Shield className="h-5 w-5 text-blue-500" />
+                <PremiumCard className="p-8 bg-navy-950/20 border border-blue-500/20 rounded-none group hover:bg-navy-950/40 transition-all">
+                    <div className="flex items-start gap-5">
+                        <div className="h-12 w-12 rounded-sm bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0 mt-0.5">
+                            <Shield className="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                            <p className="text-sm font-bold text-white">Segurança das Chaves</p>
-                            <p className="text-xs text-secondary-gray-500 mt-1">
-                                As chaves são armazenadas de forma segura e mascaradas na interface.
-                                <strong className="text-white"> Dica:</strong> As chaves são salvas globalmente e afetam todos os resumos automáticos do sistema.
+                            <p className="text-[13px] font-black text-white uppercase tracking-widest">Protocol Guard: Neural Safety</p>
+                            <p className="text-[11px] text-secondary-gray-500 mt-2 uppercase tracking-widest leading-loose">
+                                All keys are encrypted at rest and masked during transmission.
+                                <strong className="text-brand-500 ml-2"> Operational Note:</strong> Global overrides impact every neural-processed batch within the sovereignty.
                             </p>
                         </div>
                     </div>
@@ -1327,40 +1400,46 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description }: {
     };
 
     return (
-        <PremiumCard className="p-6 space-y-4">
+        <PremiumCard className="p-6 space-y-6 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="font-black text-white">{title}</h3>
-                    {description && <p className="text-[10px] text-secondary-gray-500 mt-0.5">{description}</p>}
+                    <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{title}</h3>
+                    {description && <p className="text-[9px] font-black text-secondary-gray-700 mt-2 uppercase tracking-widest leading-none">{description}</p>}
                 </div>
-                <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${currentValue ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
-                    {currentValue ? "Configurado" : "Pendente"}
+                <div className={cn(
+                    "px-3 py-1 rounded-none text-[9px] font-black uppercase tracking-[0.2em] border",
+                    currentValue ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+                )}>
+                    {currentValue ? "OPERATIONAL" : "PENDING"}
                 </div>
             </div>
 
-            <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-secondary-gray-600">
-                    <span>{currentValue ? "Chave Atual" : "Nova Chave"}</span>
+            <div className="space-y-3">
+                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-secondary-gray-600 px-1">
+                    <span>{currentValue ? "Active Protocol ID" : "Initialize Key"}</span>
                 </div>
-                <div className="relative group">
+                <div className="relative">
                     <input
                         type={showKey ? "text" : "password"}
                         value={value || (showKey ? "" : currentValue)}
                         onChange={(e) => setValue(e.target.value)}
-                        placeholder={currentValue || "Insira a chave..."}
-                        className="w-full bg-navy-950 border border-white/5 rounded-xl px-4 py-3 pr-24 text-sm text-white placeholder:text-secondary-gray-700 focus:border-brand-500/30 focus:outline-none transition-all font-mono"
+                        placeholder={currentValue || "Input Identity Key..."}
+                        className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 pr-24 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all font-mono"
                     />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                         <button
                             onClick={() => setShowKey(!showKey)}
-                            className="p-2 text-secondary-gray-500 hover:text-white transition-colors cursor-pointer"
+                            className="p-2.5 text-secondary-gray-600 hover:text-white transition-colors cursor-pointer rounded-none hover:bg-white/5"
                         >
                             {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={!value || saving}
-                            className={`p-2 rounded-lg transition-all ${success ? "bg-green-500 text-white" : "bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-0 disabled:scale-95 cursor-pointer"}`}
+                            className={cn(
+                                "p-2.5 rounded-none transition-all cursor-pointer",
+                                success ? "bg-green-500 text-white" : "bg-brand-500 text-white hover:bg-brand-400 disabled:opacity-0 disabled:scale-95"
+                            )}
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : success ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
                         </button>
@@ -1412,59 +1491,60 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
                 <StatCard icon={<Globe />} color="blue" label="Idiomas" value={new Set(templates.map(t => t.language)).size} sub="suportados" />
             </div>
 
-            <PremiumCard className="p-6">
-                <h3 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-brand-500" /> Configuração de Disparos (Meta)
+            <PremiumCard className="p-8 bg-navy-950/20 border-l-2 border-l-brand-500 rounded-none group hover:bg-navy-950/40 transition-all">
+                <h3 className="text-[11px] font-black text-secondary-gray-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3 px-1">
+                    <Shield className="h-4 w-4 text-brand-500" /> WhatsApp Meta Dispatch Protocols
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {[
-                        { label: "Resumo", key: "META_TEMPLATE_SUMMARY", icon: <MessageSquare className="h-3 w-3" /> },
-                        { label: "Alerta", key: "META_TEMPLATE_ALERT", icon: <AlertTriangle className="h-3 w-3" /> },
-                        { label: "Insight", key: "META_TEMPLATE_INSIGHT", icon: <Brain className="h-3 w-3" /> },
+                        { label: "Executive Summary", key: "META_TEMPLATE_SUMMARY", icon: <MessageSquare className="h-4 w-4" /> },
+                        { label: "Critical Alert", key: "META_TEMPLATE_ALERT", icon: <AlertTriangle className="h-4 w-4" /> },
+                        { label: "Neural Insight", key: "META_TEMPLATE_INSIGHT", icon: <Brain className="h-4 w-4" /> },
                     ].map((item) => (
-                        <div key={item.key}>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-2 block flex items-center gap-1.5">
+                        <div key={item.key} className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-gray-700 flex items-center gap-2 px-1">
                                 {item.icon} {item.label}
                             </label>
                             <select
                                 value={globalTemplateSettings[item.key] || ""}
                                 onChange={(e) => handleUpdateMapping(item.key, e.target.value)}
                                 disabled={mappingSaving}
-                                className="w-full bg-navy-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-secondary-gray-300 focus:border-brand-500/50 outline-none transition-all cursor-pointer hover:border-white/20"
+                                className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all cursor-pointer hover:bg-white/5 appearance-none"
                             >
-                                <option value="">Não definido</option>
+                                <option value="" className="bg-navy-950">UNLINKED</option>
                                 {templates
                                     .filter(t => t.platform === 'meta')
                                     .map(t => (
-                                        <option key={t.id} value={t.name}>{t.name} ({t.language})</option>
+                                        <option key={t.id} value={t.name} className="bg-navy-950">{t.name} [{t.language}]</option>
                                     ))
                                 }
                             </select>
                         </div>
                     ))}
                 </div>
-                {mappingSaving && <p className="text-[10px] text-brand-500 font-bold mt-2 animate-pulse">Salvando configurações...</p>}
+                {mappingSaving && <p className="text-[9px] text-brand-500 font-black uppercase tracking-[0.3em] mt-6 animate-pulse px-1">Synchronizing Sovereignty Protocol...</p>}
             </PremiumCard>
 
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black text-white flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-brand-500" /> Templates WhatsApp
+            <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
+                <h2 className="text-xl font-black text-white tracking-widest flex items-center gap-4 uppercase">
+                    <MessageSquare className="h-6 w-6 text-brand-500" />
+                    Message Registry
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={handleSync}
                         disabled={syncing}
-                        className="flex items-center gap-2 px-4 py-2 bg-navy-900/80 hover:bg-navy-800 text-secondary-gray-400 hover:text-white text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer disabled:opacity-50"
+                        className="flex items-center gap-3 px-6 py-3 bg-navy-950 border border-white/5 hover:bg-white/5 text-secondary-gray-500 hover:text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer disabled:opacity-50"
                     >
                         <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                        {syncing ? "Sincronizando..." : "Sincronizar com Meta"}
+                        {syncing ? "Synching Meta..." : "Sync Meta Protocols"}
                     </button>
                     {!showNew && (
                         <button
                             onClick={() => setShowNew(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                            className="flex items-center gap-3 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer shadow-lg shadow-brand-500/10"
                         >
-                            <Plus className="h-4 w-4" /> Novo Template
+                            <Plus className="h-4 w-4" /> New Protocol
                         </button>
                     )}
                 </div>
@@ -1479,10 +1559,10 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
                 ))}
 
                 {templates.length === 0 && !showNew && (
-                    <div className="text-center py-20 bg-navy-900/30 rounded-3xl border border-white/5 border-dashed">
-                        <MessageSquare className="h-12 w-12 text-secondary-gray-700 mx-auto mb-3" />
-                        <p className="text-secondary-gray-500 font-bold">Nenhum template cadastrado</p>
-                        <p className="text-secondary-gray-600 text-sm mt-1">Adicione templates Meta ou Evolution para automatizar disparos.</p>
+                    <div className="text-center py-24 bg-navy-950/20 border-2 border-dashed border-white/5 rounded-none">
+                        <MessageSquare className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
+                        <p className="text-white font-black uppercase tracking-widest text-[11px]">No Message Templates Detected</p>
+                        <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose max-w-sm mx-auto">Initialize Meta or Evolution protocols to begin automated dispatch operations.</p>
                     </div>
                 )}
             </div>
@@ -1518,67 +1598,78 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
     };
 
     return (
-        <PremiumCard className={`p-6 ${isNew ? "border-2 border-dashed border-brand-500/20" : ""}`}>
-            <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-brand-500/10 flex items-center justify-center border border-brand-500/20">
-                        <MessageSquare className="h-5 w-5 text-brand-500" />
+        <PremiumCard className={cn(
+            "p-8 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all",
+            isNew ? "border-2 border-dashed border-brand-500/30" : ""
+        )}>
+            <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-5">
+                    <div className="h-14 w-14 rounded-sm bg-brand-500/10 flex items-center justify-center border border-brand-500/20">
+                        <MessageSquare className="h-7 w-7 text-brand-500" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-white">
-                            {isNew ? "Novo Template" : form.name}
+                        <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
+                            {isNew ? "Initialize New Message Protocol" : form.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${form.platform === 'meta' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}>
-                                {form.platform}
+                        <div className="flex items-center gap-4 mt-3">
+                            <span className={cn(
+                                "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-none border",
+                                form.platform === 'meta' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                            )}>
+                                {form.platform} INTERFACE
                             </span>
                             {!isNew && <StatusBadge active={form.is_active} />}
                         </div>
                     </div>
                 </div>
                 {!isNew && (
-                    <button onClick={handleDelete} className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer">
-                        <Trash2 className="h-4 w-4" />
+                    <button onClick={handleDelete} className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer rounded-none">
+                        <Trash2 className="h-5 w-5" />
                     </button>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <InputField label="Nome do Template" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="daily_summary" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <InputField label="Protocol Identifier" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="daily_summary_alpha" />
 
-                <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-1.5 block">Plataforma</label>
+                <div className="space-y-3">
+                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Infrastructure Platform</label>
                     <select
                         value={form.platform}
                         onChange={(e) => setForm({ ...form, platform: e.target.value as any })}
-                        className="w-full bg-navy-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/50 outline-none"
+                        className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all appearance-none"
                     >
-                        <option value="meta">Meta Official</option>
-                        <option value="evolution">Evolution API</option>
+                        <option value="meta" className="bg-navy-950">META OFFICIAL UNIT</option>
+                        <option value="evolution" className="bg-navy-950">EVOLUTION API UNIT</option>
                     </select>
                 </div>
 
-                <InputField label="Categoria (Meta)" value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="MARKETING" />
-                <InputField label="Idioma" value={form.language} onChange={(v) => setForm({ ...form, language: v })} placeholder="pt_BR" />
+                <InputField label="Category Manifest" value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="MARKETING_A1" />
+                <InputField label="Language Locale" value={form.language} onChange={(v) => setForm({ ...form, language: v })} placeholder="PT_BR_UTF8" />
             </div>
 
-            <div className="mt-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-1.5 block">Conteúdo / JSON (Opcional)</label>
+            <div className="mt-8 space-y-3">
+                <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Protocol Content Payload / JSON Schema</label>
                 <textarea
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder='{"components": [...] } ou texto puro'
-                    className="w-full h-24 bg-navy-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-secondary-gray-600 focus:border-brand-500/50 outline-none transition-colors font-mono"
+                    placeholder='{"payload": {"v": 1.0, "components": [...]}}'
+                    className="w-full h-40 bg-navy-950 border border-white/5 rounded-none px-6 py-6 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all font-mono leading-loose resize-none"
                 />
             </div>
 
-            <div className="flex items-center gap-3 mt-5">
-                <button onClick={handleSave} disabled={saving || !form.name} className="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
-                    {saving ? "Salvando..." : "Salvar Template"}
+            <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/5">
+                <button
+                    onClick={handleSave}
+                    disabled={saving || !form.name.trim()}
+                    className="flex-1 sm:flex-none px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin inline mr-3" /> : <Save className="h-4 w-4 inline mr-3" />}
+                    {saving ? "Synchronizing..." : "Authorize Protocol"}
                 </button>
                 {isNew && onCancel && (
-                    <button onClick={onCancel} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-secondary-gray-400 text-sm font-bold rounded-xl transition-colors cursor-pointer">
-                        Cancelar
+                    <button onClick={onCancel} className="px-12 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all cursor-pointer">
+                        Abort Initialization
                     </button>
                 )}
             </div>
@@ -1591,31 +1682,31 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
 const PROMPT_DEFINITIONS = [
     {
         id: "PROMPT_SUMMARY_SYSTEM",
-        label: "Resumo Executivo",
-        description: "Prompt do Sistema para gerar resumos de conversas.",
-        placeholder: "Você é um assistente executivo... (Defina a persona e regras aqui)",
-        icon: <Brain className="h-5 w-5 text-pink-500" />
+        label: "Executive Logic",
+        description: "Neural core for high-density summary generation and mapping.",
+        placeholder: "Initialize Executive Persona Alpha... (Define operational constraints)",
+        icon: <Brain className="h-5 w-5 text-brand-500" />
     },
     {
         id: "PROMPT_ALERT_SYSTEM",
-        label: "Análise de Alertas",
-        description: "Prompt base para detecção de anomalias (fallback).",
-        placeholder: "Analise o texto em busca de riscos... (Defina critérios globais aqui)",
-        icon: <Shield className="h-5 w-5 text-yellow-500" />
+        label: "Anomaly Detection",
+        description: "Protocol core for heuristic risk identification and triage.",
+        placeholder: "Analyze batch ingestions for non-compliance... (Define tripwires)",
+        icon: <Shield className="h-5 w-5 text-amber-500" />
     },
     {
         id: "PROMPT_INSIGHT_SYSTEM",
-        label: "Geração de Insights",
-        description: "Prompt para extrair comportamento dos membros.",
-        placeholder: "Identifique padrões de comportamento... (Defina foco psicológico aqui)",
-        icon: <Lightbulb className="h-5 w-5 text-cyan-500" />
+        label: "Behavioral Analytics",
+        description: "Psychometric engine for extraction of unit interactions.",
+        placeholder: "Detect cognitive behavioral patterns... (Define analytical focus)",
+        icon: <Lightbulb className="h-5 w-5 text-blue-500" />
     },
     {
         id: "TELEGRAM_BOT_LINK",
-        label: "Link do Bot Telegram",
-        description: "Link global do bot usado no onboarding (ex: t.me/ignohub_bot).",
-        placeholder: "t.me/seu_bot",
-        icon: <Send className="h-5 w-5 text-blue-500" />
+        label: "TG Unit Liaison",
+        description: "Global bot invariant used for unit onboarding (t.me/unit).",
+        placeholder: "t.me/unit_id",
+        icon: <Send className="h-5 w-5 text-secondary-gray-500" />
     }
 ];
 
@@ -1647,35 +1738,43 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-6xl mx-auto h-[calc(100vh-200px)] min-h-[500px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-7xl mx-auto h-[calc(100vh-250px)] min-h-[600px]">
             {/* Sidebar List */}
-            <div className="md:col-span-4 bg-navy-900/50 border border-white/5 rounded-2xl p-4 overflow-y-auto">
-                <h3 className="text-sm font-black text-white uppercase tracking-widest px-2 mb-4">Prompts Disponíveis</h3>
-                <div className="space-y-2">
+            <div className="md:col-span-4 bg-navy-950/20 border border-white/5 rounded-none p-4 overflow-y-auto">
+                <h3 className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-[0.3em] mb-6 px-4">Neural Protocol Inventory</h3>
+                <div className="space-y-3">
                     {PROMPT_DEFINITIONS.map((def) => (
                         <button
                             key={def.id}
                             onClick={() => setSelectedPromptId(def.id)}
-                            className={`w-full text-left p-4 rounded-xl border transition-all group relative overflow-hidden ${selectedPromptId === def.id
-                                ? "bg-navy-800 border-pink-500/50 shadow-lg"
-                                : "bg-navy-950 border-white/5 hover:bg-navy-800 hover:border-white/10"
-                                }`}
+                            className={cn(
+                                "w-full text-left p-5 rounded-none border transition-all group relative overflow-hidden",
+                                selectedPromptId === def.id
+                                    ? "bg-white/5 border-brand-500/30"
+                                    : "bg-transparent border-transparent hover:bg-white/5"
+                            )}
                         >
                             <div className="flex items-start gap-4 z-10 relative">
-                                <div className={`p-2 rounded-lg ${selectedPromptId === def.id ? "bg-white/10" : "bg-black/20"}`}>
+                                <div className={cn(
+                                    "p-3 rounded-none transition-all shadow-md",
+                                    selectedPromptId === def.id ? "bg-navy-950 border border-white/10 scale-105" : "bg-navy-950/40"
+                                )}>
                                     {def.icon}
                                 </div>
-                                <div>
-                                    <h4 className={`font-bold text-sm ${selectedPromptId === def.id ? "text-white" : "text-gray-300"}`}>
+                                <div className="min-w-0">
+                                    <h4 className={cn(
+                                        "text-[12px] font-black uppercase tracking-widest leading-none",
+                                        selectedPromptId === def.id ? "text-white" : "text-secondary-gray-500 group-hover:text-white"
+                                    )}>
                                         {def.label}
                                     </h4>
-                                    <p className="text-secondary-gray-500 text-xs mt-1 line-clamp-2">
+                                    <p className="text-secondary-gray-700 text-[9px] mt-2 uppercase tracking-widest line-clamp-2 leading-relaxed font-bold">
                                         {def.description}
                                     </p>
                                 </div>
                             </div>
                             {selectedPromptId === def.id && (
-                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-pink-500 to-purple-500" />
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-500" />
                             )}
                         </button>
                     ))}
@@ -1684,24 +1783,24 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
 
             {/* Main Editor */}
             <div className="md:col-span-8 h-full">
-                <PremiumCard className="h-full flex flex-col p-6">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-6 mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-pink-500/10 flex items-center justify-center">
+                <PremiumCard className="h-full flex flex-col p-8 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-8 mb-8">
+                        <div className="flex items-center gap-5">
+                            <div className="h-14 w-14 rounded-none bg-brand-500/10 flex items-center justify-center border border-brand-500/20 shadow-xl shadow-brand-500/5">
                                 {activeDef.icon}
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-white">{activeDef.label}</h2>
-                                <p className="text-xs text-secondary-gray-500 font-mono opacity-70">{activeDef.id}</p>
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{activeDef.label}</h2>
+                                <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.3em] mt-2 opacity-80">{activeDef.id}</p>
                             </div>
                         </div>
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-pink-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                            className="px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            {saving ? "Salvando..." : "Salvar"}
+                            {saving ? "Synchronizing..." : "Update Protocol"}
                         </button>
                     </div>
 
@@ -1709,17 +1808,21 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
                         <textarea
                             value={localValue}
                             onChange={(e) => setLocalValue(e.target.value)}
-                            className="w-full h-full bg-navy-950 border border-white/10 rounded-xl px-5 py-4 text-sm text-white placeholder:text-secondary-gray-600 focus:border-pink-500/50 outline-none transition-colors leading-relaxed resize-none font-mono"
+                            className="w-full h-full bg-navy-950 border border-white/5 rounded-none px-8 py-8 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all leading-loose resize-none font-mono"
                             placeholder={activeDef.placeholder}
                         />
-                        <div className="absolute bottom-4 right-4 bg-black/60 text-white px-2 py-1 rounded text-xs backdrop-blur pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                            {localValue.length} caracteres
+                        <div className="absolute bottom-6 right-6 bg-brand-500 text-white px-4 py-2 rounded-none text-[10px] font-black pointer-events-none opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 uppercase tracking-widest">
+                            {localValue.length} LOGS
                         </div>
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2 text-xs text-secondary-gray-500">
-                        <Info className="h-3 w-3" />
-                        <p>Esta instrução define o comportamento global da IA para este tipo de tarefa.</p>
+                    <div className="mt-8 flex items-center gap-4 p-6 bg-navy-950/40 border border-white/5 rounded-none">
+                        <div className="h-10 w-10 rounded-none bg-brand-500/5 flex items-center justify-center shrink-0 border border-brand-500/10">
+                            <Info className="h-5 w-5 text-brand-500" />
+                        </div>
+                        <p className="text-[10px] text-secondary-gray-500 uppercase tracking-widest leading-loose font-bold">
+                            This instruction defines the <strong className="text-white font-black">Global Invariant</strong> for this neural task. Specificity increases protocol integrity.
+                        </p>
                     </div>
                 </PremiumCard>
             </div>
@@ -1729,25 +1832,31 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
 
 // ─── Shared Components ───
 
-function StatCard({ icon, color, label, value, sub }: { icon: React.ReactNode; color: string; label: string; value: string | number; sub: string }) {
+function StatCard({ icon, color, label, value, sub }: { icon: ReactNode; color: string; label: string; value: string | number; sub: string }) {
     const colorMap: Record<string, string> = {
         green: "bg-green-500/10 text-green-500 border-green-500/20",
         emerald: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
         blue: "bg-blue-500/10 text-blue-500 border-blue-500/20",
         amber: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+        brand: "bg-brand-500/10 text-brand-500 border-brand-500/20",
     };
 
     return (
-        <PremiumCard className="p-5">
-            <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${colorMap[color]}`}>
-                    {icon}
+        <PremiumCard className="p-0 border border-white/5 rounded-sm overflow-hidden bg-navy-950/20">
+            <div className="p-5 flex items-center gap-4 transition-colors hover:bg-white/5">
+                <div className={cn(
+                    "h-10 w-10 flex items-center justify-center rounded-sm border flex-shrink-0",
+                    colorMap[color] || colorMap.brand
+                )}>
+                    <div className="h-4 w-4 overflow-hidden flex items-center justify-center">
+                        {icon}
+                    </div>
                 </div>
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500">{label}</p>
-                    <div className="flex items-baseline gap-2">
-                        <p className="text-2xl font-black text-white">{value}</p>
-                        <span className="text-xs font-bold text-secondary-gray-500">{sub}</span>
+                <div className="min-w-0">
+                    <p className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest mb-1">{label}</p>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                        <p className="text-2xl font-black text-white leading-none tabular-nums tracking-tight uppercase">{value}</p>
+                        <span className="text-[9px] font-black text-secondary-gray-500 uppercase tracking-widest leading-none">{sub}</span>
                     </div>
                 </div>
             </div>
@@ -1757,24 +1866,25 @@ function StatCard({ icon, color, label, value, sub }: { icon: React.ReactNode; c
 
 function StatusBadge({ active }: { active: boolean }) {
     return (
-        <div className="flex items-center gap-1.5">
-            <div className={`h-2 w-2 rounded-full ${active ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-            <span className={`text-[10px] font-black uppercase ${active ? "text-green-500" : "text-red-500"}`}>
-                {active ? "Ativo" : "Inativo"}
-            </span>
+        <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-none border text-[9px] font-black uppercase tracking-widest w-fit",
+            active ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+        )}>
+            <div className={cn("h-1.5 w-1.5 bg-current", active ? "animate-pulse" : "")} />
+            {active ? "Operational" : "Offline"}
         </div>
     );
 }
 
 function InputField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
     return (
-        <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-secondary-gray-500 mb-1.5 block">{label}</label>
+        <div className="space-y-2">
+            <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{label}</label>
             <input
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full bg-navy-950 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-secondary-gray-600 focus:border-brand-500/50 focus:outline-none transition-colors"
+                className="w-full bg-navy-950/40 border border-white/5 rounded-sm px-4 py-3 text-[11px] font-black text-white tracking-widest placeholder:text-secondary-gray-700 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/10 outline-none transition-all"
             />
         </div>
     );

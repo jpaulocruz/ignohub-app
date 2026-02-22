@@ -1,173 +1,195 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { getUsageMetrics, getPlanComparisonData } from "./actions";
-import { UsageChart } from "@/components/admin/UsageChart";
+import dynamic from "next/dynamic";
+
+const UsageChart = dynamic(() => import("@/components/admin/UsageChart").then(mod => mod.UsageChart), {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full mt-4 bg-muted/20 animate-pulse rounded-lg" />
+});
 import {
     BarChart3,
     Activity,
     Users,
     AlertTriangle,
     Zap,
-    LayoutGrid
+    LayoutGrid,
+    CheckCircle2,
+    FileText,
+    Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
-export default async function UsageMonitorPage() {
-    const usageMetrics = await getUsageMetrics();
-    const comparisonData = await getPlanComparisonData();
+interface UsageMetric {
+    id: string;
+    name: string;
+    plan_type: string;
+    totalMessages: number;
+    totalTokens: number;
+}
 
-    // Define limits (approximate for display)
+interface ComparisonDatum {
+    name: string;
+    value: number;
+}
+
+export default function UsageMonitorPage() {
+    const [usageMetrics, setUsageMetrics] = useState<UsageMetric[]>([]);
+    const [comparisonData, setComparisonData] = useState<ComparisonDatum[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [metrics, comparison] = await Promise.all([
+                    getUsageMetrics(),
+                    getPlanComparisonData(),
+                ]);
+                setUsageMetrics(metrics);
+                setComparisonData(comparison);
+            } catch (err) {
+                console.error("[Monitoring] Error fetching data:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
+
     const PLAN_LIMITS: Record<string, number> = {
         starter: 5000,
         business: 25000,
         enterprise: 100000
     };
 
+    const totalTokens = usageMetrics.reduce((acc, curr) => acc + curr.totalTokens, 0);
+
+    if (loading) {
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-12 pb-20">
-            <header className="space-y-2">
-                <div className="flex items-center gap-3 mb-2">
-                    <span className="px-3 py-1 bg-brand-500/10 text-brand-500 text-[10px] font-black uppercase tracking-widest rounded-full border border-brand-500/20">
-                        Admin Intelligence
-                    </span>
-                </div>
-                <h1 className="text-5xl font-black text-white tracking-tighter leading-none">Usage Monitor</h1>
-                <p className="text-secondary-gray-500 font-medium text-lg">
-                    Monitoramento em tempo real de consumo de tokens e mensagens por organização.
+        <div className="space-y-6 pb-12">
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Usage Monitor</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Real-time ingestion monitoring and AI token consumption across organizations.
                 </p>
-            </header>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Stats Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* Chart */}
                 <div className="lg:col-span-8">
-                    <PremiumCard className="p-8 h-full">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-brand-500/10 rounded-lg">
-                                    <BarChart3 className="h-5 w-5 text-brand-500" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-white">Consumo por Plano</h3>
-                                    <p className="text-xs text-secondary-gray-500 font-bold uppercase tracking-wider">Total de mensagens enviadas</p>
-                                </div>
-                            </div>
-                        </div>
-                        <UsageChart data={comparisonData} />
-                    </PremiumCard>
-                </div>
-
-                {/* Right Column - Summary Cards */}
-                <div className="lg:col-span-4 space-y-6">
-                    <PremiumCard className="p-6 bg-navy-950 border-brand-500/20">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-                                <Activity className="h-6 w-6 text-white" />
+                    <PremiumCard className="overflow-hidden">
+                        <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+                            <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <BarChart3 className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest leading-none mb-1">Total de Batches</p>
-                                <p className="text-2xl font-black text-white leading-none">1.2k</p>
+                                <h3 className="text-sm font-semibold text-foreground">Consumption profile</h3>
+                                <Badge variant="secondary" className="text-[10px] mt-0.5">Live</Badge>
                             </div>
                         </div>
-                    </PremiumCard>
-
-                    <PremiumCard className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                                <Users className="h-6 w-6 text-green-500" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest leading-none mb-1">Organizações Ativas</p>
-                                <p className="text-2xl font-black text-white leading-none">{usageMetrics.length}</p>
-                            </div>
-                        </div>
-                    </PremiumCard>
-
-                    <PremiumCard className="p-6 bg-gradient-to-br from-navy-900 to-navy-950 border-white/5">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                                <Zap className="h-6 w-6 text-orange-500" />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest leading-none mb-1">Tokens Processados</p>
-                                <p className="text-2xl font-black text-white leading-none">
-                                    {(usageMetrics.reduce((acc, curr) => acc + curr.totalTokens, 0) / 1000).toFixed(1)}k
-                                </p>
-                            </div>
+                        <div className="p-5">
+                            <UsageChart data={comparisonData} />
                         </div>
                     </PremiumCard>
                 </div>
 
-                {/* Main Usage Table */}
+                {/* Stats */}
+                <div className="lg:col-span-4 space-y-4">
+                    {[
+                        { label: "Total batches", value: "1.2K", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
+                        { label: "Active organizations", value: String(usageMetrics.length), icon: Users, color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" },
+                        { label: "Tokens processed", value: `${(totalTokens / 1000).toFixed(1)}K`, icon: Zap, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
+                    ].map(({ label, value, icon: Icon, color, bg }) => (
+                        <PremiumCard key={label} className="p-4 flex items-center gap-4">
+                            <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", bg)}>
+                                <Icon className={cn("h-5 w-5", color)} />
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground">{label}</p>
+                                <p className="text-xl font-semibold text-foreground leading-tight">{value}</p>
+                            </div>
+                        </PremiumCard>
+                    ))}
+                </div>
+
+                {/* Table */}
                 <div className="lg:col-span-12">
                     <PremiumCard className="overflow-hidden">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                                <LayoutGrid className="h-5 w-5 text-brand-500" />
-                                Lista de Organizações
-                            </h3>
+                        <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+                            <div className="h-8 w-8 bg-muted rounded-lg flex items-center justify-center">
+                                <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-foreground">Organization registry</h3>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-navy-950/50">
-                                    <tr>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Organização</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Plano</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Mensagens</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Tokens AI</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Uso vs Limite</th>
-                                        <th className="px-8 py-5 text-[10px] font-black text-secondary-gray-500 uppercase tracking-widest">Status</th>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-border bg-muted/40">
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Organization</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Plan</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Messages</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">AI tokens</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Quota usage</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-border">
                                     {usageMetrics.map((org) => {
                                         const limit = PLAN_LIMITS[org.plan_type] || 5000;
                                         const usagePercent = Math.min((org.totalMessages / limit) * 100, 100);
                                         const isNearLimit = usagePercent > 80;
 
                                         return (
-                                            <tr key={org.id} className="hover:bg-white/[0.02] transition-colors group">
-                                                <td className="px-8 py-6">
-                                                    <p className="font-black text-white group-hover:text-brand-500 transition-colors">{org.name}</p>
-                                                    <p className="text-[10px] text-secondary-gray-500 font-bold uppercase tracking-tighter">ID: {org.id.slice(0, 8)}</p>
+                                            <tr key={org.id} className="hover:bg-accent/40 transition-colors">
+                                                <td className="px-5 py-4">
+                                                    <p className="font-medium text-foreground text-sm">{org.name}</p>
+                                                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{org.id.slice(0, 8)}</p>
                                                 </td>
-                                                <td className="px-8 py-6">
-                                                    <span className={cn(
-                                                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                                                        org.plan_type === 'starter' ? "bg-secondary-gray-500/10 text-secondary-gray-500 border-secondary-gray-500/20" :
-                                                            org.plan_type === 'business' ? "bg-brand-500/10 text-brand-500 border-brand-500/20" :
-                                                                "bg-purple-500/10 text-purple-500 border-purple-500/20"
-                                                    )}>
+                                                <td className="px-5 py-4">
+                                                    <Badge
+                                                        variant={org.plan_type === 'enterprise' ? 'default' : org.plan_type === 'business' ? 'secondary' : 'outline'}
+                                                        className="text-xs capitalize"
+                                                    >
                                                         {org.plan_type}
-                                                    </span>
+                                                    </Badge>
                                                 </td>
-                                                <td className="px-8 py-6 font-black text-white">{org.totalMessages.toLocaleString()}</td>
-                                                <td className="px-8 py-6 font-bold text-secondary-gray-400">{org.totalTokens.toLocaleString()}</td>
-                                                <td className="px-8 py-6">
-                                                    <div className="w-32">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-[10px] font-black text-secondary-gray-500 tracking-widest">{usagePercent.toFixed(0)}%</span>
+                                                <td className="px-5 py-4 font-medium text-foreground">{org.totalMessages.toLocaleString()}</td>
+                                                <td className="px-5 py-4 text-muted-foreground">{org.totalTokens.toLocaleString()}</td>
+                                                <td className="px-5 py-4">
+                                                    <div className="w-32 space-y-1.5">
+                                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                                            <span>{usagePercent.toFixed(0)}%</span>
                                                         </div>
-                                                        <div className="h-1.5 w-full bg-navy-950 rounded-full overflow-hidden">
+                                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                                                             <div
                                                                 className={cn(
-                                                                    "h-full transition-all duration-1000",
-                                                                    usagePercent > 90 ? "bg-red-500" : usagePercent > 70 ? "bg-orange-500" : "bg-brand-500"
+                                                                    "h-full rounded-full transition-all",
+                                                                    usagePercent > 90 ? "bg-destructive" : usagePercent > 70 ? "bg-amber-500" : "bg-primary"
                                                                 )}
                                                                 style={{ width: `${usagePercent}%` }}
                                                             />
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-8 py-6">
+                                                <td className="px-5 py-4">
                                                     {isNearLimit ? (
-                                                        <div className="flex items-center gap-2 text-red-500 animate-pulse">
-                                                            <AlertTriangle className="h-4 w-4" />
-                                                            <span className="text-[10px] font-black uppercase tracking-widest">Alerta de Limite</span>
-                                                        </div>
+                                                        <Badge variant="destructive" className="gap-1 text-xs">
+                                                            <AlertTriangle className="h-3 w-3" /> Near limit
+                                                        </Badge>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 text-green-500">
-                                                            <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                                            <span className="text-[10px] font-black uppercase tracking-widest">Saudável</span>
-                                                        </div>
+                                                        <Badge variant="secondary" className="gap-1 text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30">
+                                                            <CheckCircle2 className="h-3 w-3" /> Healthy
+                                                        </Badge>
                                                     )}
                                                 </td>
                                             </tr>
@@ -175,6 +197,12 @@ export default async function UsageMonitorPage() {
                                     })}
                                 </tbody>
                             </table>
+                            {usageMetrics.length === 0 && (
+                                <div className="py-16 text-center">
+                                    <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                                    <p className="text-sm text-muted-foreground">No usage data yet.</p>
+                                </div>
+                            )}
                         </div>
                     </PremiumCard>
                 </div>

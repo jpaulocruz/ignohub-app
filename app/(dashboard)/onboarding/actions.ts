@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 export async function getOnboardingData() {
     const supabase = await createClient();
 
-    const { data: whatsappConfig } = await supabase
+    // WhatsApp: get the first active Evolution API instance
+    const { data: whatsappInstance } = await supabase
         .from("admin_collection_instances")
         .select("id, instance_name")
         .eq("is_active", true)
@@ -14,6 +15,8 @@ export async function getOnboardingData() {
         .limit(1)
         .maybeSingle();
 
+    // Telegram: get bot link from multiple sources
+    // 1. system_settings global link
     const { data: globalLink } = await supabase
         .from("system_settings")
         .select("value")
@@ -22,31 +25,37 @@ export async function getOnboardingData() {
 
     let botLink = globalLink?.value;
 
+    // 2. Telegram instance name (used as bot username)
+    if (!botLink) {
+        const { data: telegramInstance } = await supabase
+            .from("admin_collection_instances")
+            .select("instance_name")
+            .eq("is_active", true)
+            .eq("provider", "telegram")
+            .limit(1)
+            .maybeSingle();
+        if (telegramInstance?.instance_name) {
+            botLink = `https://t.me/${telegramInstance.instance_name}`;
+        }
+    }
+
+    // 3. Agent preset bot_link
     if (!botLink) {
         const { data: preset } = await supabase
             .from("agent_presets")
             .select("bot_link")
             .eq("is_active", true)
-            .ilike("name", "Sentinel")
+            .not("bot_link", "is", null)
+            .limit(1)
             .maybeSingle();
         botLink = preset?.bot_link;
     }
 
-    if (!botLink) {
-        const { data: anyPreset } = await supabase
-            .from("agent_presets")
-            .select("bot_link")
-            .eq("is_active", true)
-            .limit(1)
-            .maybeSingle();
-        botLink = anyPreset?.bot_link;
-    }
-
     return {
-        whatsappConfig: whatsappConfig ? {
-            id: whatsappConfig.id,
-            display_number: whatsappConfig.instance_name,
-            phone_number_id: whatsappConfig.instance_name
+        whatsappConfig: whatsappInstance ? {
+            id: whatsappInstance.id,
+            display_number: whatsappInstance.instance_name,
+            phone_number_id: whatsappInstance.instance_name
         } : null,
         botLink: botLink || null
     };

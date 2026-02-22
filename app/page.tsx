@@ -1,9 +1,12 @@
 "use client";
 
-import { Shield, Zap, CreditCard, Settings, ArrowRight, CheckCircle2, Globe, MessageSquare, BarChart3, Users } from "lucide-react";
+import { Shield, Zap, CreditCard, ArrowRight, MessageSquare, BarChart3, Users } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PremiumCard } from "@/components/ui/PremiumCard";
+import { IgnoHubLogo } from "@/components/ui/logo";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const containerVariants = {
@@ -18,150 +21,155 @@ export default function Home() {
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 },
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-navy-900 selection:bg-brand-500/30">
-      {/* Background Orbs */}
+    <div className="flex flex-col min-h-screen bg-background selection:bg-brand-500/10 transition-colors duration-500">
+      {/* Background Blueprint */}
+      <div className="fixed inset-0 data-blueprint opacity-[0.03] dark:opacity-[0.05] pointer-events-none z-0" />
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-brand-500/10 blur-[120px] rounded-full" />
-        <div className="absolute top-[20%] -right-[10%] w-[40%] h-[40%] bg-blue-600/5 blur-[100px] rounded-full" />
-        <div className="absolute -bottom-[10%] left-[20%] w-[60%] h-[60%] bg-navy-800/50 blur-[120px] rounded-full" />
+        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-brand-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 left-0 w-[30%] h-[30%] bg-slate-500/5 blur-[100px] rounded-full" />
       </div>
 
       {/* Navbar (Landing) */}
-      <nav className="fixed top-0 w-full z-50 p-6 flex justify-center">
-        <div className="w-full max-w-6xl glass-card px-8 py-4 rounded-[24px] flex items-center justify-between border border-white/5 shadow-navbar">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
-              <Shield className="text-white h-5 w-5" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tighter text-white">IgnoHub</span>
+      <nav className="fixed top-0 w-full z-50 p-6 flex justify-start">
+        <div className="w-full max-w-7xl px-8 py-4 flex items-center justify-between border-b border-border bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <IgnoHubLogo className="scale-110 mr-1" />
+            <span className="font-bold text-2xl tracking-tight text-foreground lowercase">ignohub</span>
           </div>
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-xs font-black uppercase tracking-widest text-secondary-gray-500 hover:text-white transition-colors">Funcionalidades</Link>
-            <Link href="#solutions" className="text-xs font-black uppercase tracking-widest text-secondary-gray-500 hover:text-white transition-colors">Soluções</Link>
-            <Link href="/login" className="text-xs font-black uppercase tracking-widest text-brand-500 hover:text-brand-400 transition-colors">Entrar</Link>
-            <Link
-              href="/signup"
-              className="bg-brand-500 hover:bg-brand-600 text-white font-black py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-brand-500/20 text-[10px] uppercase tracking-widest"
-            >
-              Começar Agora
-            </Link>
+          <div className="hidden md:flex items-center gap-12">
+            <Link href="#features" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">Sistemas</Link>
+            <Link href="#solutions" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">Soberania</Link>
+            <Link href="/login" className="text-[10px] font-bold uppercase tracking-[0.3em] text-foreground border-l border-border pl-12 h-4 items-center flex">Entrar</Link>
           </div>
         </div>
       </nav>
 
-      <main className="flex-1 relative z-10 pt-32 lg:pt-48">
-        {/* Hero Section */}
-        <section className="px-6 pb-24 text-center space-y-12 overflow-hidden">
+      <main className="flex-1 relative z-10 pt-32 lg:pt-56 pb-48">
+        {/* Massive Asymmetric Hero */}
+        <section className="px-12 space-y-32 max-w-[1440px] mx-auto">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-8 max-w-5xl mx-auto"
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="flex flex-col lg:flex-row gap-32 items-start"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-navy-800 border border-white/5 shadow-inner">
-              <Zap className="w-4 h-4 text-brand-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-gray-500">Inteligência Artificial de Ponta</span>
+            <div className="flex-1 space-y-16">
+              <div className="inline-flex items-center gap-4 px-5 py-2 border border-brand-500/20 bg-brand-500/5 rounded-none">
+                <Zap className="w-4 h-4 text-brand-500" />
+                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-500">Neural Core v4.9 OPERATIONAL</span>
+              </div>
+
+              <h1 className="text-[14vw] md:text-[11rem] font-black text-white leading-[0.8] tracking-[-0.06em] uppercase">
+                Sovereign<br />
+                <span className="text-transparent stroke-text" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>Intelligence</span>
+              </h1>
+
+              <div className="flex flex-col md:flex-row gap-16 items-start">
+                <p className="text-xl text-secondary-gray-500 font-medium leading-relaxed max-w-lg border-l-2 border-brand-500/40 pl-10 italic">
+                  Advanced psychometric mapping and real-time behavioral ingestion. IgnoHub delivers the infrastructure for absolute digital sovereignty.
+                </p>
+
+                <div className="flex flex-col gap-8 pt-4">
+                  <Link
+                    href="/login"
+                    className="group flex items-center justify-between gap-12 bg-white text-navy-950 font-black py-6 px-12 rounded-none transition-all hover:bg-brand-500 hover:text-white active:scale-95 text-[11px] uppercase tracking-[0.4em] w-fit shadow-2xl shadow-white/5"
+                  >
+                    Authenticate Unit
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+                  </Link>
+                  <Link href="/signup" className="text-[10px] font-black text-secondary-gray-600 hover:text-white transition-colors uppercase tracking-[0.3em] underline underline-offset-[12px] decoration-white/10 hover:decoration-white/30">
+                    Request Access Protocols
+                  </Link>
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-[14vw] md:text-[8rem] font-black text-white leading-[0.85] tracking-tighter">
-              DADOS QUE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600">DOMINAM.</span>
-            </h1>
-
-            <p className="text-lg md:text-2xl text-secondary-gray-500 font-medium leading-relaxed max-w-3xl mx-auto">
-              A plataforma de monitoramento definitiva para líderes que exigem visão clara e
-              decisões baseadas em dados em tempo real.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-10">
-              <Link
-                href="/login"
-                className="w-full sm:w-auto flex items-center justify-center gap-3 bg-brand-500 hover:bg-brand-600 text-white font-black py-5 px-12 rounded-[24px] transition-all shadow-2xl shadow-brand-500/40 text-xl group active:scale-95"
-              >
-                ACESSAR SISTEMA
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/signup"
-                className="w-full sm:w-auto text-secondary-gray-500 hover:text-white font-bold py-5 px-10 transition-all text-xl"
-              >
-                Experimentar Grátis
-              </Link>
+            {/* Blueprint Technical Sidebox */}
+            <div className="hidden xl:flex w-96 h-[800px] border border-white/5 relative overflow-hidden bg-navy-950/20 flex-col items-center justify-between py-16 data-blueprint opacity-60 shrink-0">
+              <div className="absolute top-0 w-full h-1 bg-brand-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
+              <div className="text-[10px] font-black uppercase tracking-[0.8em] text-secondary-gray-700 [writing-mode:vertical-rl] rotate-180 opacity-40">SYSTEM_MANIFEST_V4.9</div>
+              <Users className="w-12 h-12 text-brand-500/40" />
+              <div className="space-y-4 text-center px-12">
+                <div className="h-0.5 w-12 bg-white/10 mx-auto" />
+                <p className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-widest leading-loose">
+                  CRYPTOGRAPHIC ISOLATION<br />
+                  BEHAVIORAL MAPPING<br />
+                  SOVEREIGN DELIVERY
+                </p>
+              </div>
             </div>
           </motion.div>
-
-          {/* Social Proof / Trusted by */}
-          <div className="pt-20 opacity-40">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-secondary-gray-600 mb-8">Tecnologias Integradas</p>
-            <div className="flex flex-wrap justify-center gap-12 font-black text-2xl text-secondary-gray-700">
-              <span className="tracking-tighter italic">OPENAI</span>
-              <span className="tracking-tighter">STRIPE</span>
-              <span className="tracking-tighter underline underline-offset-8">SUPABASE</span>
-              <span className="tracking-tighter border-x border-white/5 px-6">AGNO.AI</span>
-            </div>
-          </div>
         </section>
 
-        {/* Features Grid */}
-        <section id="features" className="px-6 py-32 bg-navy-900/50">
-          <div className="max-w-7xl mx-auto space-y-20">
-            <div className="text-center space-y-4">
-              <h2 className="text-xs font-black text-brand-500 uppercase tracking-[0.3em]">Nossa Estrutura</h2>
-              <p className="text-4xl md:text-6xl font-black text-white tracking-tighter">Arquitetura de Alta Performance</p>
-            </div>
-
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
-              {[
-                { icon: Shield, title: 'Segurança Militar', desc: 'Isolamento completo de dados por organização com criptografia de ponta a ponta.' },
-                { icon: BarChart3, title: 'Análise de Sentimento', desc: 'Sua comunidade em números. Saiba exatamente como seu público está se sentindo.' },
-                { icon: Zap, title: 'Alertas Instantâneos', desc: 'Receba notificações em tempo real quando riscos ou oportunidades forem detectados.' },
-                { icon: Users, title: 'Multi-Tenant', desc: 'Gestão granular de acessos e permissões para equipes de qualquer tamanho.' },
-                { icon: MessageSquare, title: 'Inbox Unificado', desc: 'Centralize todas as comunicações e insights em um único lugar.' },
-                { icon: CreditCard, title: 'Faturamento Ágil', desc: 'Gestão simplificada de assinaturas e faturas integrada ao Stripe.' }
-              ].map((feature, i) => (
-                <motion.div key={i} variants={itemVariants}>
-                  <PremiumCard className="p-10 transition-all hover:-translate-y-2 border border-white/5 group h-full">
-                    <div className="w-16 h-16 rounded-3xl bg-navy-900 flex items-center justify-center group-hover:bg-brand-500 transition-all duration-500 shadow-inner mb-8">
-                      <feature.icon className="w-8 h-8 text-brand-500 group-hover:text-white transition-colors" />
-                    </div>
-                    <h3 className="text-2xl font-black text-white tracking-tight mb-4">{feature.title}</h3>
-                    <p className="text-lg text-secondary-gray-500 leading-relaxed font-medium">{feature.desc}</p>
-                  </PremiumCard>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Call to Action */}
-        <section className="px-6 py-32">
-          <div className="max-w-6xl mx-auto bg-brand-500 rounded-[50px] p-12 md:p-24 text-center space-y-10 relative overflow-hidden shadow-2xl shadow-brand-500/20">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 blur-[100px] rounded-full translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-navy-900/10 blur-[80px] rounded-full -translate-x-1/2 translate-y-1/2" />
-
-            <div className="relative z-10 space-y-6">
-              <h2 className="text-4xl md:text-7xl font-black text-white tracking-tighter leading-none">
-                TOME O CONTROLE <br /> DA SUA COMUNIDADE.
-              </h2>
-              <p className="text-white/80 text-xl md:text-2xl font-bold max-w-2xl mx-auto">
-                Junte-se a centenas de organizações que utilizam o IgnoHub para escalar inteligência social.
+        {/* Technical Blueprint Feature Matrix */}
+        <section id="features" className="px-12 py-72 border-y border-white/5 relative overflow-hidden bg-navy-950/10">
+          <div className="absolute inset-0 data-blueprint opacity-[0.03] pointer-events-none" />
+          <div className="max-w-[1440px] mx-auto space-y-48 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-end">
+              <div className="space-y-12">
+                <h2 className="text-[11px] font-black text-brand-500 uppercase tracking-[0.8em] flex items-center gap-4">
+                  <div className="h-0.5 w-8 bg-brand-500" /> Operational Matrix
+                </h2>
+                <p className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-[0.85] uppercase">
+                  Protocol <br />
+                  Hierarchy.
+                </p>
+              </div>
+              <p className="text-lg text-secondary-gray-500 font-medium max-w-md pb-4 uppercase tracking-[0.1em] leading-relaxed">
+                Modular ingestion cores and neural processing units designed for high-tension data operations.
               </p>
-              <div className="pt-8">
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-0.5 bg-white/5 border border-white/5">
+              {[
+                { icon: Shield, title: 'Inherent Isolation', desc: 'Hardware-grade tenant isolation with cryptographic cross-unit verification.' },
+                { icon: BarChart3, title: 'Neural Psychometrics', desc: 'Predictive behavioral mapping extracted from multi-channel ingestion streams.' },
+                { icon: Zap, title: 'Impulse Response', desc: 'Zero-latency alert propagation via sovereign delivery nodes.' },
+                { icon: Users, title: 'Unit Hierarchy', desc: 'Recursive organization management with granular scope authorization.' },
+                { icon: MessageSquare, title: 'Unified Command', desc: 'Synchronized operational nexus for all behavioral telemetry.' },
+                { icon: CreditCard, title: 'Resource Minting', desc: 'Algorithmic resource allocation and simplified emission reconciliation.' }
+              ].map((feature, idx) => (
+                <PremiumCard key={feature.title} className={cn(
+                  "p-20 border-none bg-navy-950/40 hover:bg-white/5 transition-all group",
+                  idx === 1 ? "md:translate-y-12" : "",
+                  idx === 4 ? "md:-translate-y-12" : ""
+                )}>
+                  <div className="w-14 h-14 rounded-none bg-brand-500/10 flex items-center justify-center mb-12 border border-brand-500/20">
+                    <feature.icon className="w-6 h-6 text-brand-500" />
+                  </div>
+                  <h3 className="text-[13px] font-black text-white uppercase tracking-[0.2em] mb-6">{feature.title}</h3>
+                  <p className="text-[11px] text-secondary-gray-500 leading-loose uppercase font-bold tracking-widest">{feature.desc}</p>
+                </PremiumCard>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Global Deployment CTA */}
+        <section className="px-12 py-72">
+          <div className="max-w-[1440px] mx-auto bg-white p-24 md:p-48 relative overflow-hidden rounded-none">
+            <div className="absolute inset-0 data-blueprint opacity-[0.08] pointer-events-none" />
+
+            <div className="relative z-10 space-y-16">
+              <h2 className="text-[10vw] font-black text-navy-950 tracking-[-0.05em] leading-[0.8] uppercase">
+                Initialize <br />
+                <span className="text-brand-600">Sovereignty.</span>
+              </h2>
+              <div className="flex flex-col md:flex-row gap-20 items-end justify-between">
+                <p className="text-navy-900/60 text-2xl font-medium max-w-xl border-l-4 border-brand-600 pl-12 lowercase first-letter:uppercase italic">
+                  Integrate your organization into the next generation of social intelligence. Absolute control starts here.
+                </p>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center gap-3 bg-white text-brand-500 font-black py-6 px-16 rounded-[24px] transition-all hover:scale-105 active:scale-95 text-2xl shadow-xl shadow-brand-900/10"
+                  className="group inline-flex items-center gap-12 bg-navy-950 text-white font-black py-8 px-20 rounded-none transition-all hover:bg-brand-600 active:scale-95 text-[12px] uppercase tracking-[0.5em] shadow-2xl"
                 >
-                  CRIAR CONTA GRÁTIS
+                  Deploy Node
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-4 transition-transform" />
                 </Link>
               </div>
             </div>
@@ -169,17 +177,17 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="px-10 py-20 border-t border-white/5 text-center space-y-10">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-24 opacity-50">
-          <Link href="#" className="text-xs font-black uppercase text-secondary-gray-500 hover:text-white tracking-widest transition-colors">Politica de Privacidade</Link>
-          <Link href="#" className="text-xs font-black uppercase text-secondary-gray-500 hover:text-white tracking-widest transition-colors">Termos de Uso</Link>
-          <Link href="#" className="text-xs font-black uppercase text-secondary-gray-500 hover:text-white tracking-widest transition-colors">Contato</Link>
+      <footer className="px-12 py-32 border-t border-border bg-slate-50/30 dark:bg-slate-900/30 text-center space-y-12">
+        <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-24 opacity-70">
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Politica de Privacidade</Link>
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Termos de Uso</Link>
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Contato</Link>
         </div>
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-6 w-6 rounded-md bg-white/10 flex items-center justify-center">
-            <Shield className="h-4 w-4 text-white/40" />
+        <div className="flex flex-col items-center gap-8">
+          <div className="h-10 w-10 rounded-sm bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <Shield className="h-5 w-5 text-slate-400" />
           </div>
-          <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.5em]">
+          <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.5em]">
             © 2026 IGNO-SYSTEMS OPERATIONAL &bull; BRAZIL
           </p>
         </div>

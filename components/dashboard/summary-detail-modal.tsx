@@ -1,6 +1,7 @@
 'use client'
 
-import { LucideX, LucideCalendar, LucideZap, LucideCheckCircle2 } from 'lucide-react'
+import { LucideX, LucideCalendar, LucideZap } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface SummaryDetailModalProps {
     summary: {
@@ -18,44 +19,48 @@ export function SummaryDetailModal({ summary, onClose }: SummaryDetailModalProps
     const endDate = new Date(summary.period_end).toLocaleString('pt-BR')
 
     return (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/95 backdrop-blur-xl p-6 overflow-y-auto">
-            <div className="max-w-3xl w-full bg-zinc-900/50 border border-zinc-800 p-10 rounded-[40px] shadow-2xl relative animate-in fade-in zoom-in duration-300">
-                <button
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-background/80 backdrop-blur-sm p-6 overflow-y-auto">
+            <div className="max-w-2xl w-full bg-card border border-border p-6 rounded-xl shadow-xl relative animate-in fade-in zoom-in duration-200">
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onClose}
-                    className="absolute top-8 right-8 text-zinc-500 hover:text-white transition-colors"
+                    className="absolute top-4 right-4 h-8 w-8"
                 >
-                    <LucideX className="h-6 w-6" />
-                </button>
+                    <LucideX className="h-4 w-4" />
+                </Button>
 
-                <div className="space-y-8">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest">
-                            <LucideCalendar className="h-3 w-3" />
-                            Período de Análise
+                <div className="space-y-5">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <LucideCalendar className="h-3.5 w-3.5" />
+                            Analysis period
                         </div>
-                        <h2 className="text-3xl font-black text-white tracking-tighter">
-                            {startDate} - {endDate}
+                        <h2 className="text-lg font-semibold text-foreground leading-snug">
+                            {startDate} — {endDate}
                         </h2>
                     </div>
 
-                    <div className="prose prose-invert max-w-none">
-                        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl whitespace-pre-wrap text-zinc-300 font-medium leading-relaxed">
+                    <div className="rounded-lg border border-border bg-muted/30 p-4">
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                             {summary.summary_text}
-                        </div>
+                        </p>
                     </div>
 
                     {summary.highlights && Object.keys(summary.highlights).length > 0 && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-black text-white tracking-tight">Destaques Detectados</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <h3 className="text-sm font-medium text-foreground">Highlights</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {Object.entries(summary.highlights).map(([key, value]: [string, any]) => (
-                                    <div key={key} className="p-4 rounded-2xl bg-indigo-600/5 border border-indigo-600/10 flex gap-4">
-                                        <div className="w-8 h-8 rounded-xl bg-indigo-600/10 flex items-center justify-center text-indigo-500 flex-shrink-0">
-                                            <LucideZap className="h-4 w-4" />
+                                    <div key={key} className="p-3 rounded-lg border border-border bg-card flex gap-3">
+                                        <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                            <LucideZap className="h-3.5 w-3.5" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{key}</p>
-                                            <p className="text-sm text-zinc-300 font-medium mt-0.5">{JSON.stringify(value)}</p>
+                                            <p className="text-xs font-medium text-muted-foreground">{key}</p>
+                                            <p className="text-sm text-foreground font-medium mt-0.5">
+                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}
@@ -63,12 +68,9 @@ export function SummaryDetailModal({ summary, onClose }: SummaryDetailModalProps
                         </div>
                     )}
 
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-xl transition-all"
-                    >
-                        FECHAR DETALHES
-                    </button>
+                    <Button onClick={onClose} className="w-full">
+                        Close
+                    </Button>
                 </div>
             </div>
         </div>
