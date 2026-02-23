@@ -21,19 +21,20 @@ import { InboxDetailView } from "@/components/inbox/inbox-detail-view";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 const STATUS_TABS = [
-    { id: "pending", label: "Pending" },
-    { id: "resolved", label: "Resolved" },
-    { id: "favorites", label: "Favorites" },
-    { id: "archived", label: "Archived" },
+    { id: "pending", labelKey: "pending" },
+    { id: "resolved", labelKey: "resolved" },
+    { id: "favorites", labelKey: "favorites" },
+    { id: "archived", labelKey: "archived" },
 ] as const;
 
 const TYPE_FILTERS = [
-    { id: "all", label: "All" },
-    { id: "alert", label: "Alerts" },
-    { id: "summary", label: "Summaries" },
-    { id: "insight", label: "Insights" },
+    { id: "all", labelKey: "all" },
+    { id: "alert", labelKey: "alerts" },
+    { id: "summary", labelKey: "summaries" },
+    { id: "insight", labelKey: "insights" },
 ] as const;
 
 function sourceIcon(source: string) {
@@ -51,6 +52,7 @@ function sourceBadge(source: string, selected: boolean) {
 
 export default function InboxPage() {
     const { organization, loading: orgLoading } = useOrganization();
+    const t = useTranslations("inbox");
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -142,7 +144,7 @@ export default function InboxPage() {
                 {/* Panel header */}
                 <div className="px-4 py-4 border-b border-border space-y-3">
                     <div className="flex items-center justify-between">
-                        <h1 className="text-sm font-semibold text-foreground">Intelligence feed</h1>
+                        <h1 className="text-sm font-semibold text-foreground">{t('title')}</h1>
                         {pendingCount > 0 && (
                             <Badge variant="secondary" className="text-xs font-medium">
                                 {pendingCount}
@@ -158,12 +160,12 @@ export default function InboxPage() {
                                 onClick={() => setStatusFilter(tab.id as any)}
                                 className={cn(
                                     "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
-                                    statusFilter === tab.id
+                                    tab.id === statusFilter
                                         ? "bg-background text-foreground shadow-sm"
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                {tab.label}
+                                {t(tab.labelKey)}
                             </button>
                         ))}
                     </div>
@@ -173,7 +175,7 @@ export default function InboxPage() {
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search..."
+                            placeholder={t('search', { defaultMessage: 'Search...' })}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="pl-8 h-8 text-sm"
@@ -193,7 +195,7 @@ export default function InboxPage() {
                                         : "bg-transparent text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground"
                                 )}
                             >
-                                {f.label}
+                                {t(f.labelKey)}
                             </button>
                         ))}
                     </div>
@@ -208,9 +210,9 @@ export default function InboxPage() {
                     ) : filteredItems.length === 0 ? (
                         <div className="text-center py-16 px-4">
                             <Inbox className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                            <p className="text-sm font-medium text-foreground">No items found</p>
+                            <p className="text-sm font-medium text-foreground">{t('no_items')}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Insights will appear once messages are processed.
+                                {t('no_items_desc')}
                             </p>
                         </div>
                     ) : (
@@ -299,7 +301,7 @@ export default function InboxPage() {
                         className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" />
-                        Back to feed
+                        {t('back_to_feed')}
                     </button>
                 </div>
                 {selectedItem ? (
@@ -314,9 +316,9 @@ export default function InboxPage() {
                         <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mb-4">
                             <Inbox className="h-5 w-5 text-muted-foreground" />
                         </div>
-                        <h3 className="text-sm font-semibold text-foreground">Select an item</h3>
+                        <h3 className="text-sm font-semibold text-foreground">{t('select_item')}</h3>
                         <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                            Choose an item from the feed to view its details and take action.
+                            {t('select_item_desc')}
                         </p>
                     </div>
                 )}

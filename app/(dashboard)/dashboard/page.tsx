@@ -21,6 +21,7 @@ import Link from "next/link";
 import { SummaryDetailModal } from "@/components/dashboard/summary-detail-modal";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 import type { Database } from "@/types/database.types";
 
@@ -31,6 +32,7 @@ type MemberInsight = Database['public']['Tables']['member_insights']['Row'];
 
 export default function DashboardPage() {
     const { organization, loading: orgLoading } = useOrganization();
+    const t = useTranslations("dashboard");
     const [analytics, setAnalytics] = useState<Analytics[]>([]);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [summaries, setSummaries] = useState<Summary[]>([]);
@@ -157,9 +159,9 @@ export default function DashboardPage() {
             {/* Page header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Overview of your communities and AI insights.
+                        {t('subtitle')}
                     </p>
                 </div>
                 <Link
@@ -167,7 +169,7 @@ export default function DashboardPage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:bg-primary/90 transition-colors"
                 >
                     <Users className="h-4 w-4" />
-                    View communities
+                    {t('view_communities')}
                 </Link>
             </div>
 
@@ -175,7 +177,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <PremiumCard className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-muted-foreground">Sentiment score</p>
+                        <p className="text-sm text-muted-foreground">{t('sentiment_score')}</p>
                         <Smile className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-3xl font-semibold text-foreground">{avgSentiment}%</p>
@@ -185,13 +187,13 @@ export default function DashboardPage() {
                             ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
                             : "bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400"
                     )}>
-                        {avgSentiment > 70 ? "Healthy" : "Needs attention"}
+                        {avgSentiment > 70 ? "Healthy" : t('needs_attention')}
                     </span>
                 </PremiumCard>
 
                 <PremiumCard className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-muted-foreground">Active alerts</p>
+                        <p className="text-sm text-muted-foreground">{t('active_alerts')}</p>
                         <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-3xl font-semibold text-foreground">{alerts.length}</p>
@@ -201,20 +203,20 @@ export default function DashboardPage() {
                             ? "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
                             : "bg-muted text-muted-foreground"
                     )}>
-                        {alerts.length > 0 ? "Requires review" : "All clear"}
+                        {alerts.length > 0 ? "Requires review" : t('all_clear')}
                     </span>
                 </PremiumCard>
 
                 <PremiumCard className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-muted-foreground">Messages (24h)</p>
+                        <p className="text-sm text-muted-foreground">{t('messages_24h')}</p>
                         <Activity className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-3xl font-semibold text-foreground">
                         {messageVolume > 999 ? `${(messageVolume / 1000).toFixed(1)}K` : messageVolume}
                     </p>
                     <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
-                        Processed
+                        {t('processed')}
                     </span>
                 </PremiumCard>
             </div>
@@ -226,8 +228,8 @@ export default function DashboardPage() {
                     <PremiumCard className="p-6">
                         <div className="flex items-center justify-between mb-5">
                             <div>
-                                <h2 className="text-sm font-semibold text-foreground">Sentiment trend</h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">Community health over time</p>
+                                <h2 className="text-sm font-semibold text-foreground">{t('sentiment_trend')}</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">{t('community_health')}</p>
                             </div>
                             <div className="flex gap-1">
                                 <button className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">Historical</button>

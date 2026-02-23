@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useOrganization } from "@/hooks/use-organization";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { IgnoHubLogo } from "@/components/ui/logo";
 import { Badge } from "@/components/ui/badge";
@@ -33,15 +34,15 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const routes = [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    { label: "Intelligence", icon: MessageSquare, href: "/inbox" },
-    { label: "Communities", icon: Users, href: "/groups" },
-    { label: "Billing", icon: CreditCard, href: "/dashboard/billing" },
-    { label: "Settings", icon: Settings, href: "/settings" },
-    { label: "Assets", icon: Shield, href: "/assets", adminOnly: true },
-    { label: "Monitoring", icon: Activity, href: "/monitoring", adminOnly: true },
-    { label: "Plans", icon: CreditCard, href: "/plans", adminOnly: true },
+const routeKeys = [
+    { key: "dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    { key: "intelligence", icon: MessageSquare, href: "/inbox" },
+    { key: "communities", icon: Users, href: "/groups" },
+    { key: "billing", icon: CreditCard, href: "/dashboard/billing" },
+    { key: "settings", icon: Settings, href: "/settings" },
+    { key: "assets", icon: Shield, href: "/assets", adminOnly: true },
+    { key: "monitoring", icon: Activity, href: "/monitoring", adminOnly: true },
+    { key: "plans", icon: CreditCard, href: "/plans", adminOnly: true },
 ];
 
 export function Sidebar({ ...props }: React.ComponentProps<typeof ShadcnSidebar>) {
@@ -49,6 +50,9 @@ export function Sidebar({ ...props }: React.ComponentProps<typeof ShadcnSidebar>
     const router = useRouter();
     const { organization, role, isSuperadmin } = useOrganization();
     const supabase = createClient();
+    const t = useTranslations();
+
+    const routes = routeKeys.map(r => ({ ...r, label: t(`nav.${r.key}`) }));
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -65,7 +69,7 @@ export function Sidebar({ ...props }: React.ComponentProps<typeof ShadcnSidebar>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>Home</SidebarGroupLabel>
+                    <SidebarGroupLabel>{t('nav.home')}</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {routes.filter(r => !r.adminOnly || isSuperadmin).slice(0, 5).map((route) => {
@@ -87,7 +91,7 @@ export function Sidebar({ ...props }: React.ComponentProps<typeof ShadcnSidebar>
 
                 {isSuperadmin && (
                     <SidebarGroup>
-                        <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                        <SidebarGroupLabel>{t('common.admin')}</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {routes.filter(r => r.adminOnly).map((route) => {

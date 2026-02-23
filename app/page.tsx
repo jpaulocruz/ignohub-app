@@ -7,8 +7,12 @@ import { PremiumCard } from "@/components/ui/PremiumCard";
 import { IgnoHubLogo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
+import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 
 export default function Home() {
+  const t = useTranslations("landing");
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -24,6 +28,15 @@ export default function Home() {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 },
   };
+
+  const features = [
+    { icon: Shield, title: t('feature_isolation_title'), desc: t('feature_isolation_desc') },
+    { icon: BarChart3, title: t('feature_psychometrics_title'), desc: t('feature_psychometrics_desc') },
+    { icon: Zap, title: t('feature_impulse_title'), desc: t('feature_impulse_desc') },
+    { icon: Users, title: t('feature_hierarchy_title'), desc: t('feature_hierarchy_desc') },
+    { icon: MessageSquare, title: t('feature_command_title'), desc: t('feature_command_desc') },
+    { icon: CreditCard, title: t('feature_resource_title'), desc: t('feature_resource_desc') },
+  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-brand-500/10 transition-colors duration-500">
@@ -42,9 +55,10 @@ export default function Home() {
             <span className="font-bold text-2xl tracking-tight text-foreground lowercase">ignohub</span>
           </div>
           <div className="hidden md:flex items-center gap-12">
-            <Link href="#features" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">Sistemas</Link>
-            <Link href="#solutions" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">Soberania</Link>
-            <Link href="/login" className="text-[10px] font-bold uppercase tracking-[0.3em] text-foreground border-l border-border pl-12 h-4 items-center flex">Entrar</Link>
+            <Link href="#features" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">{t('nav_systems')}</Link>
+            <Link href="#solutions" className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500 hover:text-foreground transition-all">{t('nav_sovereignty')}</Link>
+            <LocaleSwitcher />
+            <Link href="/login" className="text-[10px] font-bold uppercase tracking-[0.3em] text-foreground border-l border-border pl-12 h-4 items-center flex">{t('nav_login')}</Link>
           </div>
         </div>
       </nav>
@@ -61,17 +75,17 @@ export default function Home() {
             <div className="flex-1 space-y-16">
               <div className="inline-flex items-center gap-4 px-5 py-2 border border-brand-500/20 bg-brand-500/5 rounded-none">
                 <Zap className="w-4 h-4 text-brand-500" />
-                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-500">Neural Core v4.9 OPERATIONAL</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-brand-500">{t('badge')}</span>
               </div>
 
               <h1 className="text-[14vw] md:text-[11rem] font-black text-white leading-[0.8] tracking-[-0.06em] uppercase">
-                Sovereign<br />
-                <span className="text-transparent stroke-text" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>Intelligence</span>
+                {t('hero_title_1')}<br />
+                <span className="text-transparent stroke-text" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>{t('hero_title_2')}</span>
               </h1>
 
               <div className="flex flex-col md:flex-row gap-16 items-start">
                 <p className="text-xl text-secondary-gray-500 font-medium leading-relaxed max-w-lg border-l-2 border-brand-500/40 pl-10 italic">
-                  Advanced psychometric mapping and real-time behavioral ingestion. IgnoHub delivers the infrastructure for absolute digital sovereignty.
+                  {t('hero_description')}
                 </p>
 
                 <div className="flex flex-col gap-8 pt-4">
@@ -79,11 +93,11 @@ export default function Home() {
                     href="/login"
                     className="group flex items-center justify-between gap-12 bg-white text-navy-950 font-black py-6 px-12 rounded-none transition-all hover:bg-brand-500 hover:text-white active:scale-95 text-[11px] uppercase tracking-[0.4em] w-fit shadow-2xl shadow-white/5"
                   >
-                    Authenticate Unit
+                    {t('cta_login')}
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
                   </Link>
                   <Link href="/signup" className="text-[10px] font-black text-secondary-gray-600 hover:text-white transition-colors uppercase tracking-[0.3em] underline underline-offset-[12px] decoration-white/10 hover:decoration-white/30">
-                    Request Access Protocols
+                    {t('cta_signup')}
                   </Link>
                 </div>
               </div>
@@ -92,14 +106,14 @@ export default function Home() {
             {/* Blueprint Technical Sidebox */}
             <div className="hidden xl:flex w-96 h-[800px] border border-white/5 relative overflow-hidden bg-navy-950/20 flex-col items-center justify-between py-16 data-blueprint opacity-60 shrink-0">
               <div className="absolute top-0 w-full h-1 bg-brand-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
-              <div className="text-[10px] font-black uppercase tracking-[0.8em] text-secondary-gray-700 [writing-mode:vertical-rl] rotate-180 opacity-40">SYSTEM_MANIFEST_V4.9</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.8em] text-secondary-gray-700 [writing-mode:vertical-rl] rotate-180 opacity-40">{t('sidebar_manifest')}</div>
               <Users className="w-12 h-12 text-brand-500/40" />
               <div className="space-y-4 text-center px-12">
                 <div className="h-0.5 w-12 bg-white/10 mx-auto" />
                 <p className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-widest leading-loose">
-                  CRYPTOGRAPHIC ISOLATION<br />
-                  BEHAVIORAL MAPPING<br />
-                  SOVEREIGN DELIVERY
+                  {t('sidebar_isolation')}<br />
+                  {t('sidebar_mapping')}<br />
+                  {t('sidebar_delivery')}
                 </p>
               </div>
             </div>
@@ -113,27 +127,20 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-32 items-end">
               <div className="space-y-12">
                 <h2 className="text-[11px] font-black text-brand-500 uppercase tracking-[0.8em] flex items-center gap-4">
-                  <div className="h-0.5 w-8 bg-brand-500" /> Operational Matrix
+                  <div className="h-0.5 w-8 bg-brand-500" /> {t('features_label')}
                 </h2>
                 <p className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-[0.85] uppercase">
-                  Protocol <br />
-                  Hierarchy.
+                  {t('features_title_1')} <br />
+                  {t('features_title_2')}
                 </p>
               </div>
               <p className="text-lg text-secondary-gray-500 font-medium max-w-md pb-4 uppercase tracking-[0.1em] leading-relaxed">
-                Modular ingestion cores and neural processing units designed for high-tension data operations.
+                {t('features_subtitle')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-0.5 bg-white/5 border border-white/5">
-              {[
-                { icon: Shield, title: 'Inherent Isolation', desc: 'Hardware-grade tenant isolation with cryptographic cross-unit verification.' },
-                { icon: BarChart3, title: 'Neural Psychometrics', desc: 'Predictive behavioral mapping extracted from multi-channel ingestion streams.' },
-                { icon: Zap, title: 'Impulse Response', desc: 'Zero-latency alert propagation via sovereign delivery nodes.' },
-                { icon: Users, title: 'Unit Hierarchy', desc: 'Recursive organization management with granular scope authorization.' },
-                { icon: MessageSquare, title: 'Unified Command', desc: 'Synchronized operational nexus for all behavioral telemetry.' },
-                { icon: CreditCard, title: 'Resource Minting', desc: 'Algorithmic resource allocation and simplified emission reconciliation.' }
-              ].map((feature, idx) => (
+              {features.map((feature, idx) => (
                 <PremiumCard key={feature.title} className={cn(
                   "p-20 border-none bg-navy-950/40 hover:bg-white/5 transition-all group",
                   idx === 1 ? "md:translate-y-12" : "",
@@ -157,18 +164,18 @@ export default function Home() {
 
             <div className="relative z-10 space-y-16">
               <h2 className="text-[10vw] font-black text-navy-950 tracking-[-0.05em] leading-[0.8] uppercase">
-                Initialize <br />
-                <span className="text-brand-600">Sovereignty.</span>
+                {t('cta_title_1')} <br />
+                <span className="text-brand-600">{t('cta_title_2')}</span>
               </h2>
               <div className="flex flex-col md:flex-row gap-20 items-end justify-between">
                 <p className="text-navy-900/60 text-2xl font-medium max-w-xl border-l-4 border-brand-600 pl-12 lowercase first-letter:uppercase italic">
-                  Integrate your organization into the next generation of social intelligence. Absolute control starts here.
+                  {t('cta_description')}
                 </p>
                 <Link
                   href="/signup"
                   className="group inline-flex items-center gap-12 bg-navy-950 text-white font-black py-8 px-20 rounded-none transition-all hover:bg-brand-600 active:scale-95 text-[12px] uppercase tracking-[0.5em] shadow-2xl"
                 >
-                  Deploy Node
+                  {t('cta_button')}
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-4 transition-transform" />
                 </Link>
               </div>
@@ -179,16 +186,16 @@ export default function Home() {
 
       <footer className="px-12 py-32 border-t border-border bg-slate-50/30 dark:bg-slate-900/30 text-center space-y-12">
         <div className="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-24 opacity-70">
-          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Politica de Privacidade</Link>
-          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Termos de Uso</Link>
-          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">Contato</Link>
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">{t('footer_privacy')}</Link>
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">{t('footer_terms')}</Link>
+          <Link href="#" className="text-[9px] font-black uppercase text-slate-500 hover:text-foreground tracking-[0.3em] transition-all">{t('footer_contact')}</Link>
         </div>
         <div className="flex flex-col items-center gap-8">
           <div className="h-10 w-10 rounded-sm bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
             <Shield className="h-5 w-5 text-slate-400" />
           </div>
           <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.5em]">
-            © 2026 IGNO-SYSTEMS OPERATIONAL &bull; BRAZIL
+            {t('footer_copyright')}
           </p>
         </div>
       </footer>
