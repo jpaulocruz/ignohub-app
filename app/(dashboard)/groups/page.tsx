@@ -32,10 +32,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 export default function GroupsPage() {
     const { organization, loading: orgLoading } = useOrganization();
     const router = useRouter();
+    const t = useTranslations("groups");
     const [groups, setGroups] = useState<any[]>([]);
     const [editingGroup, setEditingGroup] = useState<any | null>(null);
     const [verifying, setVerifying] = useState(false);
@@ -144,14 +146,14 @@ export default function GroupsPage() {
             {/* Header */}
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Communities</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Manage your monitored groups and connections.
+                        {t('subtitle')}
                     </p>
                 </div>
                 <Button onClick={() => router.push("/onboarding")} className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Add community
+                    {t('add_community')}
                 </Button>
             </div>
 
@@ -166,7 +168,7 @@ export default function GroupsPage() {
                     <div className="w-12 h-12 bg-muted rounded-2xl flex items-center justify-center mb-4">
                         <Globe className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-sm font-semibold text-foreground">No communities yet</h3>
+                    <h3 className="text-sm font-semibold text-foreground">{t('no_groups')}</h3>
                     <p className="text-xs text-muted-foreground mt-1 max-w-xs">
                         Add your first community to start monitoring conversations.
                     </p>

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 interface Invoice {
     id: string;
@@ -26,6 +27,7 @@ export default function BillingPage() {
     const [loadingInvoices, setLoadingInvoices] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const supabase = createClient();
+    const t = useTranslations("billing");
 
     useEffect(() => {
         async function fetchInvoices() {
@@ -94,9 +96,9 @@ export default function BillingPage() {
     return (
         <div className="space-y-6 pb-12">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Manage your subscription and view payment history.
+                    {t('manage_subscription')}
                 </p>
             </div>
 

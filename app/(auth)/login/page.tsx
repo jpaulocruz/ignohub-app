@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const supabase = createClient();
     const router = useRouter();
+    const t = useTranslations("auth");
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -38,8 +40,8 @@ export default function LoginPage() {
     return (
         <div className="space-y-6">
             <div className="space-y-2 text-center">
-                <h1 className="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
-                <p className="text-sm text-muted-foreground">Enter your credentials below to access your workspace</p>
+                <h1 className="text-2xl font-semibold tracking-tight">{t('login_title')}</h1>
+                <p className="text-sm text-muted-foreground">{t('login_subtitle')}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -50,22 +52,22 @@ export default function LoginPage() {
                 )}
 
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email address</Label>
+                    <Label htmlFor="email">{t('email')}</Label>
                     <Input
                         id="email"
                         name="email"
                         type="email"
                         required
-                        placeholder="you@example.com"
+                        placeholder={t('email_placeholder')}
                         autoComplete="email"
                     />
                 </div>
 
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t('password')}</Label>
                         <Link href="#" className="text-xs text-primary hover:underline">
-                            Forgot password?
+                            {t('forgot_password')}
                         </Link>
                     </div>
                     <div className="relative">
@@ -74,7 +76,7 @@ export default function LoginPage() {
                             name="password"
                             type={showPassword ? "text" : "password"}
                             required
-                            placeholder="••••••••"
+                            placeholder={t('password_placeholder')}
                             autoComplete="current-password"
                             className="pr-10"
                         />
@@ -92,14 +94,14 @@ export default function LoginPage() {
 
                 <Button type="submit" disabled={loading} className="w-full">
                     {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    {loading ? "Signing in..." : "Sign in"}
+                    {loading ? t('signing_in') : t('sign_in')}
                 </Button>
             </form>
 
             <p className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
+                {t('no_account')}{" "}
                 <Link href="/signup" className="text-primary hover:underline font-medium">
-                    Create account
+                    {t('create_account')}
                 </Link>
             </p>
         </div>

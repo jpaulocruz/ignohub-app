@@ -16,9 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslations } from "next-intl";
 
 export default function SettingsPage() {
     const { organization, refresh } = useOrganization();
+    const t = useTranslations("settings");
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -209,9 +211,9 @@ export default function SettingsPage() {
     return (
         <div className="space-y-12 pb-32">
             <header className="space-y-2">
-                <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                 <p className="text-sm text-muted-foreground">
-                    Manage your account and organization preferences.
+                    {t('subtitle')}
                 </p>
             </header>
 
@@ -519,7 +521,7 @@ export default function SettingsPage() {
                             ) : (
                                 <Save className="h-4 w-4 mr-2" />
                             )}
-                            {saving ? "Saving..." : "Save changes"}
+                            {saving ? t('saving') : t('save_changes')}
                         </Button>
                     </PremiumCard>
 
