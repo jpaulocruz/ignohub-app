@@ -101,38 +101,53 @@ export async function registerGroup(data: {
         return { error: "Já existe um grupo cadastrado com este nome. Por favor, escolha outro nome ou exclua o existente." };
     }
 
-    // 1. Get default preset (Sentinel) or first available
-    const { data: preset } = await supabase
-        .from('agent_presets')
-        .select('id, name')
-        .eq('name', 'Sentinel')
-        .single()
+    try {
+        // 1. Get default preset (Sentinel) or first available
+        const { data: preset } = await supabase
+            .from('agent_presets')
+            .select('id, name')
+            .eq('name', 'Sentinel')
+            .single()
 
-    // 2. Create Group
-    const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .insert({
-            name: data.name,
-            description: data.description,
-            platform: data.platform,
-            organization_id: data.organizationId,
-            preset_id: preset?.id,
-            external_id: externalId,
-            is_active: true
-        })
-        .select("id, external_id")
-        .single()
+        // 2. Create Group
+        const { data: group, error: groupError } = await supabase
+            .from('groups')
+            .insert({
+                name: data.name,
+                description: data.description,
+                platform: data.platform,
+                organization_id: data.organizationId,
+                preset_id: preset?.id,
+                external_id: externalId,
+                is_active: true
+            })
+            .select("id, external_id")
+            .single()
 
-    if (groupError || !group) {
-        console.error("[registerGroup]", groupError);
-        return { error: groupError?.message || "Erro ao registrar grupo." };
+        if (groupError || !group) {
+            console.error("[registerGroup] Group Error:", groupError);
+            return { error: groupError?.message || "Erro ao registrar grupo." };
+        }
+
+        // 3. Create Group Agent record
+        // Fixed: Columns in 'group_agents' are 'preset' (text) and 'status' (text)
+        const { error: agentError } = await supabase.from("group_agents").insert({
+            group_id: group.id,
+            preset: preset?.name || 'Sentinel',
+            status: "pending",
+        });
+
+        if (agentError) {
+            console.error("[registerGroup] Agent Error:", agentError);
+            // We don't return error here because the group was created, 
+            // but we log it for debugging.
+        }
+
+        return { groupId: group.id, externalId: group.external_id };
+    } catch (err: any) {
+        console.error("[registerGroup] Unexpected Error:", err);
+        return { error: "Ocorreu um erro inesperado ao processar sua solicitação." };
     }
-
-    await supabase.from("group_agents").insert({
-        group_id: group.id,
-        preset_id: preset?.id, // Use preset_id instead of preset name string if schema changed, or name
-        status: "pending",
-    });
 
     return { groupId: group.id, externalId: group.external_id };
 }
