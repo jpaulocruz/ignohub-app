@@ -11,63 +11,88 @@ export async function middleware(request: NextRequest) {
         },
     })
 
-    const supabase = createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-                    response = NextResponse.next({
-                        request: {
-                            headers: request.headers,
-                        },
-                    })
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        response.cookies.set(name, value, options)
-                    )
-                },
-            },
-        }
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    const pathname = request.nextUrl.pathname
-
-    // Protect dashboard routes
-    if (!user && pathname.startsWith('/dashboard')) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        return NextResponse.redirect(url)
+    // 1. Defensive check for environment variables in Edge Runtime
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('[Middleware] Missing Supabase environment variables')
+        return response
     }
 
-    // Triple Protection: Admin route guard
-    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
+    try {
+        const supabase = createServerClient<Database>(
+            supabaseUrl,
+            supabaseAnonKey,
+            {
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll()
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                        response = NextResponse.next({
+                            request: {
+                                headers: request.headers,
+                            },
+                        })
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            response.cookies.set(name, value, options)
+                        )
+                    },
+                },
+            }
+        )
 
-    if (isAdminRoute) {
-        if (!user) {
+        const {
+            data: { user },
+            error: userError
+        } = await supabase.auth.getUser()
+
+        if (userError) {
+            console.error('[Middleware] Auth error:', userError)
+        }
+
+        const pathname = request.nextUrl.pathname
+
+        // Protect dashboard routes
+        if (!user && pathname.startsWith('/dashboard')) {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             return NextResponse.redirect(url)
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_superadmin')
-            .eq('id', user.id)
-            .single()
+        // Triple Protection: Admin route guard
+        const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
 
-        if (!profile?.is_superadmin) {
-            const url = request.nextUrl.clone()
-            url.pathname = '/403'
-            return NextResponse.redirect(url)
+        if (isAdminRoute) {
+            if (!user) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/login'
+                return NextResponse.redirect(url)
+            }
+
+            // Using maybeSingle() to avoid throwing on missing profiles
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('is_superadmin')
+                .eq('id', user.id)
+                .maybeSingle()
+
+            if (profileError) {
+                console.error('[Middleware] Profile error:', profileError)
+            }
+
+            if (!profile?.is_superadmin) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/403'
+                return NextResponse.redirect(url)
+            }
         }
+    } catch (error) {
+        console.error('[Middleware] Critical failure:', error)
+        // Ensure we don't break the whole site if middleware fails
+        return NextResponse.next()
     }
 
     return response
