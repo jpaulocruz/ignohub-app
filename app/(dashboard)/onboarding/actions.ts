@@ -6,16 +6,31 @@ import { revalidatePath } from "next/cache";
 export async function getOnboardingData() {
     const supabase = await createClient();
 
-    // WhatsApp: get the first active Evolution API instance
-    const { data: whatsappInstance } = await supabase
-        .from("admin_collection_instances")
-        .select("id, instance_name")
+    // 1. WhatsApp: Prioritize Official Meta outbound, fallback to Evolution
+    const { data: metaConfig } = await supabase
+        .from("admin_outbound_meta")
+        .select("display_number")
         .eq("is_active", true)
-        .eq("provider", "evolution")
         .limit(1)
         .maybeSingle();
 
-    // Telegram: get bot link from multiple sources
+    let whatsappNumber = metaConfig?.display_number;
+    let whatsappId = metaConfig?.id;
+
+    if (!whatsappNumber) {
+        const { data: evolutionInstance } = await supabase
+            .from("admin_collection_instances")
+            .select("id, instance_name")
+            .eq("is_active", true)
+            .eq("provider", "evolution")
+            .limit(1)
+            .maybeSingle();
+
+        whatsappNumber = evolutionInstance?.instance_name;
+        whatsappId = evolutionInstance?.id;
+    }
+
+    // 2. Telegram: get bot link from multiple sources
     // 1. system_settings global link
     const { data: globalLink } = await supabase
         .from("system_settings")
@@ -35,7 +50,10 @@ export async function getOnboardingData() {
             .limit(1)
             .maybeSingle();
         if (telegramInstance?.instance_name) {
-            botLink = `https://t.me/${telegramInstance.instance_name}`;
+            const username = telegramInstance.instance_name.startsWith('@')
+                ? telegramInstance.instance_name.slice(1)
+                : telegramInstance.instance_name;
+            botLink = `https://t.me/${username}`;
         }
     }
 
@@ -52,10 +70,10 @@ export async function getOnboardingData() {
     }
 
     return {
-        whatsappConfig: whatsappInstance ? {
-            id: whatsappInstance.id,
-            display_number: whatsappInstance.instance_name,
-            phone_number_id: whatsappInstance.instance_name
+        whatsappConfig: whatsappNumber ? {
+            id: whatsappId || 'default',
+            display_number: whatsappNumber,
+            phone_number_id: whatsappNumber
         } : null,
         botLink: botLink || null
     };
