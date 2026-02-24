@@ -73,7 +73,7 @@ export async function createNotification(data: {
     scope: "super_admin" | "organization";
     organization_id?: string;
     user_id?: string;
-    metadata?: any;
+    metadata?: unknown;
 }) {
     const supabase = createAdminClient();
     const { error } = await supabase.from("notifications").insert(data);

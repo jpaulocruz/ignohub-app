@@ -66,6 +66,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { useTranslations } from "next-intl";
 
 type TabId = "collection" | "official" | "telegram" | "monitor" | "messages" | "prompts";
 
@@ -82,35 +83,90 @@ interface TabGroup {
     items: TabItem[];
 }
 
-const TAB_GROUPS: TabGroup[] = [
+const TAB_GROUPS = [
     {
-        title: "Channels",
+        title: "channels",
         items: [
-            { id: "collection", label: "WhatsApp Collection", icon: <QrCode className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
-            { id: "official", label: "WhatsApp Official", icon: <Send className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
-            { id: "telegram", label: "Telegram Unit", icon: <Bot className="h-4 w-4" />, activeColor: "text-sky-600 dark:text-sky-400", activeBg: "bg-sky-100 dark:bg-sky-900/30" },
+            { id: "collection", key: "whatsapp_collection", icon: <QrCode className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
+            { id: "official", key: "whatsapp_official", icon: <Send className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
+            { id: "telegram", key: "telegram_unit", icon: <Bot className="h-4 w-4" />, activeColor: "text-sky-600 dark:text-sky-400", activeBg: "bg-sky-100 dark:bg-sky-900/30" },
         ],
     },
     {
-        title: "Intelligence",
+        title: "intelligence",
         items: [
-            { id: "messages", label: "Message Protocol", icon: <MessageSquare className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
-            { id: "prompts", label: "Neural Prompts", icon: <Brain className="h-4 w-4" />, activeColor: "text-amber-600 dark:text-amber-400", activeBg: "bg-amber-100 dark:bg-amber-900/30" },
-            { id: "monitor", label: "Intelligence Monitor", icon: <Activity className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
+            { id: "messages", key: "message_protocol", icon: <MessageSquare className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
+            { id: "prompts", key: "neural_prompts", icon: <Brain className="h-4 w-4" />, activeColor: "text-amber-600 dark:text-amber-400", activeBg: "bg-amber-100 dark:bg-amber-900/30" },
+            { id: "monitor", key: "intelligence_monitor", icon: <Activity className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
         ],
     },
 ];
 
+interface AssetStats {
+    presetCounts: Record<string, number>;
+    platformCounts: Record<string, number>;
+}
+
+interface EvolutionInstance {
+    id: string;
+    instance_name: string;
+    status: string;
+    is_active: boolean;
+    provider: string;
+    groups_count?: number;
+    instance_key?: string;
+    qr_code_base64?: string;
+    is_system_bot?: boolean;
+}
+
+interface WhatsAppConfig {
+    id: string;
+    phone_number_id: string;
+    waba_id: string;
+    display_number: string;
+    access_token_encrypted?: string;
+    verify_token?: string;
+    is_active: boolean;
+    is_system_bot?: boolean;
+}
+
+interface AgentPreset {
+    id: string;
+    name: string;
+    bot_link?: string;
+    telegram_bot_username?: string;
+    whatsapp_support_number?: string;
+    is_active: boolean;
+    preserve_context?: boolean;
+}
+
+interface TokenUsage {
+    name: string;
+    tokens: number;
+    platform: string;
+}
+
+interface WhatsAppTemplate {
+    id: string;
+    name: string;
+    platform: string;
+    category: string;
+    language: string;
+    content: string;
+    is_active: boolean;
+}
+
 export default function AdminAssetsPage() {
+    const t = useTranslations("assets");
     const [activeTab, setActiveTab] = useState<TabId>("collection");
-    const [outboundMeta, setOutboundMeta] = useState<any[]>([]);
-    const [instances, setInstances] = useState<any[]>([]);
-    const [presets, setPresets] = useState<any[]>([]);
-    const [templates, setTemplates] = useState<any[]>([]);
-    const [tokenUsage, setTokenUsage] = useState<any[]>([]);
+    const [outboundMeta, setOutboundMeta] = useState<WhatsAppConfig[]>([]);
+    const [instances, setInstances] = useState<EvolutionInstance[]>([]);
+    const [presets, setPresets] = useState<AgentPreset[]>([]);
+    const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+    const [tokenUsage, setTokenUsage] = useState<TokenUsage[]>([]);
     const [aiSettings, setAiSettings] = useState<Record<string, string>>({});
     const [globalTemplateSettings, setGlobalTemplateSettings] = useState<Record<string, string>>({});
-    const [loadStats, setLoadStats] = useState<{ presetCounts: Record<string, number>; platformCounts: Record<string, number> }>({ presetCounts: {}, platformCounts: {} });
+    const [loadStats, setLoadStats] = useState<AssetStats>({ presetCounts: {}, platformCounts: {} });
     const [loading, setLoading] = useState(true);
 
     const fetchAll = useCallback(async () => {
@@ -126,14 +182,14 @@ export default function AdminAssetsPage() {
                 getWhatsAppTemplates(),
                 getGlobalTemplateSettings(),
             ]);
-            setOutboundMeta(meta);
-            setInstances(inst);
-            setPresets(pres);
-            setLoadStats(stats);
-            setTokenUsage(usage);
-            setAiSettings(ai);
-            setTemplates(tmpls);
-            setGlobalTemplateSettings(gTmpls);
+            setOutboundMeta(meta || []);
+            setInstances(inst || []);
+            setPresets(pres || []);
+            setLoadStats(stats as AssetStats);
+            setTokenUsage(usage || []);
+            setAiSettings(ai || {});
+            setTemplates(tmpls || []);
+            setGlobalTemplateSettings(gTmpls || {});
         } catch (e) {
             console.error("Failed to fetch assets:", e);
         } finally {
@@ -149,9 +205,9 @@ export default function AdminAssetsPage() {
     return (
         <div className="space-y-6 pb-12">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Asset registry</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Manage ingestion channels, delivery credentials, and AI consumption metrics.
+                    {t('subtitle')}
                 </p>
             </div>
 
@@ -163,7 +219,7 @@ export default function AdminAssetsPage() {
                             <div key={group.title}>
                                 {gi > 0 && <Separator className="my-2" />}
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2 pb-1.5">
-                                    {group.title}
+                                    {t(group.title)}
                                 </p>
                                 {group.items.map((tab) => {
                                     const isActive = activeTab === tab.id;
@@ -184,7 +240,7 @@ export default function AdminAssetsPage() {
                                             )}>
                                                 {tab.icon}
                                             </div>
-                                            {tab.label}
+                                            {t(tab.key)}
                                         </button>
                                     );
                                 })}
@@ -208,26 +264,27 @@ export default function AdminAssetsPage() {
                             ) : (
                                 <div className="space-y-6">
                                     {activeTab === "collection" && (
-                                        <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} />
+                                        <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} t={t} />
                                     )}
                                     {activeTab === "official" && (
-                                        <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} />
+                                        <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} t={t} />
                                     )}
                                     {activeTab === "telegram" && (
-                                        <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} />
+                                        <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} t={t} />
                                     )}
                                     {activeTab === "messages" && (
                                         <MessagesTab
                                             templates={templates}
                                             globalTemplateSettings={globalTemplateSettings}
                                             onRefresh={fetchAll}
+                                            t={t}
                                         />
                                     )}
                                     {activeTab === "monitor" && (
-                                        <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} />
+                                        <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
                                     )}
                                     {activeTab === "prompts" && (
-                                        <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} />
+                                        <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
                                     )}
                                 </div>
                             )}
@@ -253,7 +310,7 @@ function LoadingSkeleton() {
 
 // ─── Tab 1: WhatsApp Collection (Evolution) ───
 
-function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; loadStats: any; onRefresh: () => void }) {
+function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[]; loadStats: any; onRefresh: () => void, t: any }) {
     const [showNewForm, setShowNewForm] = useState(false);
     const [qrModal, setQrModal] = useState<{ open: boolean; qr?: string | null; name?: string; dbId?: string; state?: string; loading?: boolean; error?: string }>({ open: false });
     const [newName, setNewName] = useState("");
@@ -282,14 +339,14 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                 setQrModal(prev => ({
                     ...prev,
                     loading: false,
-                    error: "Não foi possível obter o QR Code. Verifique se a instância está conectada."
+                    error: t("qr_not_available")
                 }));
             }
         } catch (e) {
             setQrModal(prev => ({
                 ...prev,
                 loading: false,
-                error: "Erro ao conectar com a API."
+                error: t("connection_failed")
             }));
         }
     };
@@ -310,7 +367,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                 startPolling(newName.trim(), result.instance?.id);
             }
         } catch (e: any) {
-            setError(e.message || "Falha ao criar instância");
+            setError(e.message || t("connection_failed"));
         } finally {
             setSaving(false);
         }
@@ -324,11 +381,11 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                 setQrModal({ open: true, qr: result.qr, name: inst.instance_name, dbId: inst.id, state: "qr_ready" });
                 startPolling(inst.instance_name, inst.id);
             } else {
-                setError("QR Code não disponível. A instância pode já estar conectada.");
+                setError(t("qr_not_available"));
                 onRefresh();
             }
         } catch (e: any) {
-            setError(e.message || "Falha ao gerar QR Code");
+            setError(e.message || t("connection_failed"));
         }
     };
 
@@ -364,7 +421,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             const result = await syncEvolutionInstances();
             onRefresh();
         } catch (e: any) {
-            setError(e.message || "Falha ao sincronizar");
+            setError(e.message || t("connection_failed"));
         } finally {
             setSyncing(false);
         }
@@ -376,7 +433,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             await deleteEvolutionInstance(inst.id, inst.instance_name);
             onRefresh();
         } catch (e: any) {
-            setError(e.message || "Falha ao remover");
+            setError(e.message || t("connection_failed"));
         }
     };
 
@@ -409,14 +466,14 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
     }, []);
 
     const handleTestConnection = async () => {
-        setConnTest({ status: "testing", message: "Verificando conexão..." });
+        setConnTest({ status: "testing", message: t("testing_connection") });
         try {
             const res = await testEvolutionConnection();
             if (res.success) {
-                setConnTest({ status: "success", message: `Conexão OK! ${res.count} instâncias (${res.duration}ms)` });
+                setConnTest({ status: "success", message: t("connection_ok", { count: res.count, duration: res.duration }) });
                 setTimeout(() => setConnTest({ status: "idle", message: "" }), 5000);
             } else {
-                setConnTest({ status: "error", message: res.error || "Falha na conexão" });
+                setConnTest({ status: "error", message: res.error || t("connection_failed") });
             }
         } catch (e: any) {
             setConnTest({ status: "error", message: e.message });
@@ -440,7 +497,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             setEditingConfig(false);
             onRefresh(); // Refresh instances with new config
         } catch (e: any) {
-            setError(e.message || "Falha ao salvar configuração");
+            setError(e.message || t("connection_failed"));
         } finally {
             setSaving(false);
         }
@@ -448,10 +505,10 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "open": return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20", label: "Operational" };
-            case "connecting": return { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20", label: "Syncing..." };
-            case "qr_ready": return { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20", label: "Pending Auth" };
-            default: return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20", label: "Dormant" };
+            case "open": return { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/20", label: t("status_open") };
+            case "connecting": return { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20", label: t("status_connecting") };
+            case "qr_ready": return { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20", label: t("status_qr_ready") };
+            default: return { bg: "bg-red-500/10", text: "text-red-500", border: "border-red-500/20", label: t("status_dormant") };
         }
     };
 
@@ -474,23 +531,23 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                     >
                         <ArrowLeft className="h-5 w-5 text-text-muted hover:text-foreground" />
                     </button>
-                    <h2 className="text-xl font-bold text-foreground">Configuração Evolution API</h2>
+                    <h2 className="text-xl font-bold text-foreground">{t("evolution_config_title")}</h2>
                 </div>
 
                 <PremiumCard className="p-8 space-y-6">
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
                         <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                            <p className="text-sm text-blue-300 font-medium">Credenciais Necessárias</p>
+                            <p className="text-sm text-blue-300 font-medium">{t("credentials_needed")}</p>
                             <p className="text-xs text-blue-400/80">
-                                Insira a URL e a API Key da sua instância Evolution API. Esses dados são necessários para gerenciar suas conexões do WhatsApp.
+                                {t("credentials_desc")}
                             </p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-text-muted">URL da API</label>
+                            <label className="text-sm font-medium text-text-muted">{t("url_api")}</label>
                             <div className="relative">
                                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
                                 <input
@@ -504,7 +561,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-text-muted">Global API Key</label>
+                            <label className="text-sm font-medium text-text-muted">{t("global_api_key")}</label>
                             <div className="relative">
                                 <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
                                 <input
@@ -534,7 +591,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                             disabled={connTest.status === "testing" || !configForm.url || !configForm.apiKey}
                             className="bg-background border border-card-border hover:bg-background/80 text-foreground font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
                         >
-                            Testar Conexão
+                            {t("test_connection")}
                         </button>
                         <button
                             onClick={handleSaveConfig}
@@ -542,7 +599,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                             className="bg-brand-500 hover:bg-brand-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            {saving ? "Salvando..." : "Salvar Configuração"}
+                            {saving ? t("saving") : t("save_configuration")}
                         </button>
                     </div>
                 </PremiumCard>
@@ -569,9 +626,9 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 {/* Stats Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 w-full">
-                    <StatCard icon={<QrCode />} color="green" label="Instâncias Evolution" value={instances.length} sub="configuradas" />
-                    <StatCard icon={<Smartphone />} color="green" label="Conectadas" value={instances.filter(i => i.status === "open").length} sub={`de ${instances.length}`} />
-                    <StatCard icon={<Activity />} color="green" label="Grupos WhatsApp" value={loadStats.platformCounts?.whatsapp || 0} sub="coletando mensagens" />
+                    <StatCard icon={<QrCode />} color="green" label={t("instances_evolution")} value={instances.length} sub={t("configuradas")} />
+                    <StatCard icon={<Smartphone />} color="green" label={t("connected")} value={instances.filter(i => i.status === "open").length} sub={`${t("de")} ${instances.length}`} />
+                    <StatCard icon={<Activity />} color="green" label={t("groups_whatsapp")} value={loadStats.platformCounts?.whatsapp || 0} sub={t("collecting_messages")} />
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -602,7 +659,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                         className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-background/80 text-sm font-medium text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer disabled:opacity-50"
                     >
                         <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                        {syncing ? "Sincronizando..." : "Sincronizar"}
+                        {syncing ? t("syncing") : t("sync")}
                     </button>
                 </div>
             </div>
@@ -629,7 +686,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                                 <span className={cn("text-[9px] font-black uppercase tracking-[0.2em]", statusInfo.text)}>{statusInfo.label}</span>
                                             </div>
                                             <span className="text-[9px] font-black text-secondary-gray-500 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none uppercase tracking-widest">
-                                                {inst.groups_count ?? 0} Unit{(inst.groups_count ?? 0) !== 1 ? "s" : ""} Synced
+                                                {(inst.groups_count ?? 0) === 1 ? t("unit_synced", { count: inst.groups_count ?? 0 }) : t("units_synced", { count: inst.groups_count ?? 0 })}
                                             </span>
                                             {inst.instance_key && (
                                                 <span className="text-[9px] font-black text-secondary-gray-600 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none font-mono tracking-tight uppercase">
@@ -646,7 +703,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                         <button
                                             onClick={() => handleConnect(inst)}
                                             className="p-3 rounded-sm border border-green-500/20 bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors cursor-pointer"
-                                            title="Protocol Link (QR)"
+                                            title={t("protocol_link_qr")}
                                         >
                                             <QrCode className="h-4 w-4" />
                                         </button>
@@ -656,7 +713,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                         <button
                                             onClick={() => handleOpenQr(inst)}
                                             className="p-3 rounded-sm border border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
-                                            title="Inspect QR"
+                                            title={t("inspect_qr")}
                                         >
                                             <Eye className="h-4 w-4" />
                                         </button>
@@ -670,7 +727,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                             "p-3 rounded-sm border transition-all cursor-pointer",
                                             inst.is_system_bot ? "bg-brand-500/10 text-brand-500 border-brand-500/30" : "bg-navy-950 border-white/5 text-secondary-gray-600 hover:text-brand-500 hover:border-brand-500/30"
                                         )}
-                                        title={inst.is_system_bot ? "System Core Active" : "Map to System Core"}
+                                        title={inst.is_system_bot ? t("system_core_active") : t("map_to_system_core")}
                                     >
                                         <Star className={cn("h-4 w-4", inst.is_system_bot ? "fill-current" : "")} />
                                     </button>
@@ -680,14 +737,14 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                             "p-3 rounded-sm border transition-all cursor-pointer",
                                             inst.is_active ? "bg-green-500/5 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "bg-red-500/5 border-red-500/20 text-red-500 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500"
                                         )}
-                                        title={inst.is_active ? "Terminate Protocol" : "Initialize Protocol"}
+                                        title={inst.is_active ? t("terminate_protocol") : t("initialize_protocol")}
                                     >
                                         <Power className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(inst)}
                                         className="p-3 rounded-sm border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
-                                        title="Purge Identity"
+                                        title={t("purge_identity")}
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
@@ -702,13 +759,13 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
             {showNewForm ? (
                 <PremiumCard className="p-8 border-2 border-dashed border-green-500/30 bg-green-500/5 rounded-none">
                     <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3 uppercase tracking-tighter">
-                        <Plus className="h-6 w-6 text-green-500" /> New Registry Unit
+                        <Plus className="h-6 w-6 text-green-500" /> {t("new_registry_unit")}
                     </h3>
                     <p className="text-[11px] font-medium text-secondary-gray-500 mb-6 uppercase tracking-widest bg-navy-950/40 p-3 border border-white/5">
-                        Initialize a sovereign ingestion channel. Automated group message synchronization protocol will be applied on discovery.
+                        {t("unit_identity_desc")}
                     </p>
                     <div className="space-y-4">
-                        <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Unit Identity (Lowercase / Kebab Only)</label>
+                        <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("unit_identity")}</label>
                         <input
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}
@@ -724,16 +781,16 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                             className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer flex items-center gap-3"
                         >
                             {saving ? (
-                                <><RefreshCw className="h-4 w-4 animate-spin" /> Synchronizing...</>
+                                <><RefreshCw className="h-4 w-4 animate-spin" /> {t("syncing")}</>
                             ) : (
-                                <><Plus className="h-4 w-4" /> Initialize Unit</>
+                                <><Plus className="h-4 w-4" /> {t("initialize_unit")}</>
                             )}
                         </button>
                         <button
                             onClick={() => { setShowNewForm(false); setError(null); }}
                             className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer"
                         >
-                            Abort
+                            {t("abort")}
                         </button>
                     </div>
                 </PremiumCard>
@@ -744,7 +801,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                 >
                     <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-green-500 transition-colors">
                         <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Initialize New Unit Channel</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
                     </div>
                 </button>
             )}
@@ -767,7 +824,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-foreground">QR Code</h3>
+                                <h3 className="text-xl font-bold text-foreground">{t("qr_code_title")}</h3>
                                 <button onClick={handleCloseQrModal} className="p-2 rounded-lg hover:bg-card-hover transition-colors cursor-pointer text-text-muted hover:text-foreground">
                                     <X className="h-5 w-5" />
                                 </button>
@@ -780,9 +837,9 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                     <div className="h-16 w-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
                                         <Check className="h-8 w-8 text-green-500" />
                                     </div>
-                                    <p className="text-lg font-bold text-green-600 dark:text-green-500">Conectado!</p>
-                                    <p className="text-sm text-text-muted mt-2">WhatsApp vinculado com sucesso.</p>
-                                    <p className="text-xs text-text-muted mt-1">Mensagens de grupos estão sendo coletadas.</p>
+                                    <p className="text-lg font-bold text-green-600 dark:text-green-500">{t("conected_success")}</p>
+                                    <p className="text-sm text-text-muted mt-2">{t("whatsapp_linked_success")}</p>
+                                    <p className="text-xs text-text-muted mt-1">{t("messages_collecting")}</p>
                                 </div>
                             ) : (
                                 <>
@@ -790,7 +847,7 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                         {qrModal.loading ? (
                                             <div className="py-8 text-center">
                                                 <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-3" />
-                                                <p className="text-gray-600 font-medium text-sm">Gerando novo QR Code...</p>
+                                                <p className="text-gray-600 font-medium text-sm">{t("generating_qr")}</p>
                                             </div>
                                         ) : qrModal.error ? (
                                             <div className="text-center py-8">
@@ -800,14 +857,14 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                                     onClick={() => qrModal.name && qrModal.dbId && handleOpenQr({ instance_name: qrModal.name, id: qrModal.dbId, status: qrModal.state })}
                                                     className="mt-4 px-4 py-2 bg-background border border-card-border text-foreground text-sm font-medium rounded-lg hover:bg-card-hover transition-colors cursor-pointer"
                                                 >
-                                                    Tentar Novamente
+                                                    {t("try_again")}
                                                 </button>
                                             </div>
                                         ) : qrModal.qr ? (
                                             <img src={qrModal.qr.startsWith("data:") ? qrModal.qr : `data:image/png;base64,${qrModal.qr}`} alt="QR Code" className="w-full h-auto rounded-lg" />
                                         ) : (
                                             <div className="py-8 text-center">
-                                                <p className="text-gray-500 text-sm">Nenhum QR Code disponível.</p>
+                                                <p className="text-gray-500 text-sm">{t("qr_not_available")}</p>
                                             </div>
                                         )}
                                     </div>
@@ -815,12 +872,12 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                                     <div className="flex items-center justify-center gap-2 mt-4">
                                         <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
                                         <p className="text-xs text-text-muted">
-                                            Aguardando escaneamento... (verificando a cada 5s)
+                                            {t("waiting_scan")}
                                         </p>
                                     </div>
 
                                     <p className="text-xs text-text-muted text-center mt-2">
-                                        Abra o WhatsApp → Menu → Aparelhos conectados → Conectar
+                                        {t("scan_instructions")}
                                     </p>
                                 </>
                             )}
@@ -836,10 +893,10 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
                         <Shield className="h-5 w-5 text-green-600 dark:text-green-500" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-foreground">Configuração Automática</p>
+                        <p className="text-sm font-semibold text-foreground">{t("auto_config")}</p>
                         <p className="text-xs text-text-muted mt-1 leading-relaxed">
-                            Ao criar uma instância, as seguintes configurações são aplicadas automaticamente:
-                            <strong className="text-green-600 dark:text-green-500 font-medium"> groupsIgnore: false</strong> (mensagens de grupo ativadas),
+                            {t("auto_config_desc")}
+                            <strong className="text-green-600 dark:text-green-500 font-medium"> groupsIgnore: false</strong>,
                             <strong className="text-amber-600 dark:text-amber-500 font-medium"> rejectCall: true</strong>,
                             <strong className="text-foreground font-medium"> alwaysOnline: true</strong>.
                         </p>
@@ -852,23 +909,23 @@ function CollectionTab({ instances, loadStats, onRefresh }: { instances: any[]; 
 
 // ─── Tab 2: WhatsApp Official (Meta) ───
 
-function OfficialTab({ configs, loadStats, onRefresh }: { configs: any[]; loadStats: any; onRefresh: () => void }) {
+function OfficialTab({ configs, loadStats, onRefresh, t }: { configs: WhatsAppConfig[]; loadStats: AssetStats; onRefresh: () => void, t: any }) {
     const [showNew, setShowNew] = useState(false);
     const whatsappGroupCount = loadStats.platformCounts?.whatsapp || 0;
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <StatCard icon={<Shield />} color="emerald" label="Números Meta API" value={configs.length} sub="configurados" />
-                <StatCard icon={<Send />} color="emerald" label="Disparos Ativos" value={whatsappGroupCount} sub="grupos recebendo alertas" />
+                <StatCard icon={<Shield />} color="emerald" label={t("meta_numbers")} value={configs.length} sub={t("configuradas")} />
+                <StatCard icon={<Send />} color="emerald" label={t("active_shots")} value={whatsappGroupCount} sub={t("groups_receiving")} />
             </div>
 
             {configs.map((config) => (
-                <OutboundMetaCard key={config.id} config={config} groupCount={whatsappGroupCount} onRefresh={onRefresh} />
+                <OutboundMetaCard key={config.id} config={config} groupCount={whatsappGroupCount} onRefresh={onRefresh} t={t} />
             ))}
 
             {showNew ? (
-                <OutboundMetaCard config={null} isNew groupCount={0} onRefresh={() => { onRefresh(); setShowNew(false); }} onCancel={() => setShowNew(false)} />
+                <OutboundMetaCard config={null} isNew groupCount={0} onRefresh={() => { onRefresh(); setShowNew(false); }} onCancel={() => setShowNew(false)} t={t} />
             ) : (
                 <button
                     onClick={() => setShowNew(true)}
@@ -876,7 +933,7 @@ function OfficialTab({ configs, loadStats, onRefresh }: { configs: any[]; loadSt
                 >
                     <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-emerald-500 transition-colors">
                         <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Authorize New Meta Protocol</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("authorize_meta_protocol")}</span>
                     </div>
                 </button>
             )}
@@ -884,8 +941,8 @@ function OfficialTab({ configs, loadStats, onRefresh }: { configs: any[]; loadSt
     );
 }
 
-function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
-    config: any; isNew?: boolean; groupCount: number; onRefresh: () => void; onCancel?: () => void;
+function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }: {
+    config: WhatsAppConfig | null; isNew?: boolean; groupCount: number; onRefresh: () => void; onCancel?: () => void; t: any;
 }) {
     const [form, setForm] = useState({
         phone_number_id: config?.phone_number_id || "",
@@ -908,7 +965,7 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
     };
 
     const handleDelete = async () => {
-        if (!config?.id || !confirm("Remover esta configuração?")) return;
+        if (!config?.id || !confirm(t("connection_failed"))) return;
         await deleteWhatsAppConfig(config.id);
         onRefresh();
     };
@@ -934,13 +991,13 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
                     </div>
                     <div>
                         <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
-                            {isNew ? "New Meta Protocol" : (config.display_number || config.phone_number_id)}
+                            {isNew ? t("new_meta_protocol") : (config.display_number || config.phone_number_id)}
                         </h3>
                         <div className="flex items-center gap-3 mt-2">
                             {!isNew && <StatusBadge active={config.is_active} />}
                             {!isNew && (
                                 <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 rounded-none border border-white/5">
-                                    {groupCount} Unit Syncs
+                                    {groupCount === 1 ? t("unit_syncs", { count: groupCount }) : t("unit_syncs", { count: groupCount })}
                                 </span>
                             )}
                         </div>
@@ -980,7 +1037,7 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
                 <InputField label="WABA ID" value={form.waba_id} onChange={(v) => setForm({ ...form, waba_id: v })} placeholder="1234567890" />
                 <InputField label="Display Number" value={form.display_number} onChange={(v) => setForm({ ...form, display_number: v })} placeholder="+55 11 99999-0000" />
                 <div>
-                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1 mb-2 block">Cryptographic Access Token</label>
+                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1 mb-2 block">{t("cryptographic_token")}</label>
                     <div className="relative">
                         <input
                             type={showToken ? "text" : "password"}
@@ -999,7 +1056,7 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
             {config?.verify_token && (
                 <div className="mt-8 flex items-center gap-6 p-6 bg-navy-950/40 border border-white/5 rounded-none group">
                     <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.2em] mb-2">Protocol Verify Token</span>
+                        <span className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.2em] mb-2">{t("protocol_verify_token")}</span>
                         <code className="text-[13px] text-brand-500 font-mono font-black tracking-tight truncate max-w-sm uppercase">{config.verify_token}</code>
                     </div>
                     <button onClick={copyVerifyToken} className="ml-auto p-3 rounded-none hover:bg-brand-500/10 text-secondary-gray-600 hover:text-brand-500 transition-all cursor-pointer border border-transparent hover:border-brand-500/20">
@@ -1015,11 +1072,11 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
                     className="flex-1 sm:flex-none px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
                 >
                     {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {saving ? "Synchronizing..." : "Authorize Registry"}
+                    {saving ? t("syncing") : t("authorize_registry")}
                 </button>
                 {isNew && onCancel && (
                     <button onClick={onCancel} className="px-10 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
-                        Abort
+                        {t("abort")}
                     </button>
                 )}
             </div>
@@ -1029,7 +1086,7 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel }: {
 
 // ─── Tab 3: Telegram ───
 
-function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: any[]; presets: any[]; loadStats: any; onRefresh: () => void }) {
+function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instances: any[]; presets: AgentPreset[]; loadStats: AssetStats; onRefresh: () => void, t: any }) {
     const [showNewBot, setShowNewBot] = useState(false);
     const [newBotName, setNewBotName] = useState("");
     const [newBotKey, setNewBotKey] = useState("");
@@ -1052,9 +1109,9 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard icon={<Bot />} color="blue" label="Bots Telegram" value={instances.length} sub="cadastrados" />
-                <StatCard icon={<Globe />} color="blue" label="Grupos Ativos" value={telegramGroupCount} sub="monitorados" />
-                <StatCard icon={<Activity />} color="blue" label="Presets Vinculados" value={presets.length} sub="configurados" />
+                <StatCard icon={<Bot />} color="blue" label={t("bots_telegram")} value={instances.length} sub={t("configuradas")} />
+                <StatCard icon={<Globe />} color="blue" label={t("active_groups")} value={telegramGroupCount} sub={t("monitored")} />
+                <StatCard icon={<Activity />} color="blue" label={t("linked_presets")} value={presets.length} sub={t("configuradas")} />
             </div>
 
             {/* Existing Telegram Instances */}
@@ -1069,7 +1126,9 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
                                 <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none truncate">{inst.instance_name}</p>
                                 <div className="flex items-center gap-3 mt-2.5">
                                     <StatusBadge active={inst.is_active} />
-                                    <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 border border-white/5">{inst.groups_count} Unit Syncs</span>
+                                    <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 border border-white/5">
+                                        {inst.groups_count === 1 ? t("unit_syncs", { count: inst.groups_count }) : t("unit_syncs", { count: inst.groups_count })}
+                                    </span>
                                 </div>
                                 {inst.instance_key && (
                                     <p className="text-[10px] text-secondary-gray-700 font-mono mt-2 tracking-tight uppercase">Protocol: ••••{inst.instance_key.slice(-8)}</p>
@@ -1101,9 +1160,9 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
 
             {/* Agent Presets with Edit Option */}
             <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-text-muted tracking-wide">Presets do Sistema</h3>
+                <h3 className="text-sm font-semibold text-text-muted tracking-wide">{t("system_presets")}</h3>
                 {presets.map((preset) => (
-                    <PresetCard key={preset.id} preset={preset} onRefresh={onRefresh} />
+                    <PresetCard key={preset.id} preset={preset} onRefresh={onRefresh} t={t} />
                 ))}
             </div>
 
@@ -1111,18 +1170,18 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
             {showNewBot ? (
                 <PremiumCard className="p-8 border-2 border-dashed border-blue-500/30 bg-blue-500/5 rounded-none">
                     <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tighter">
-                        <Plus className="h-6 w-6 text-blue-500" /> New Telegram Bot Instance
+                        <Plus className="h-6 w-6 text-blue-500" /> {t("new_telegram_bot_title")}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField label="Bot Unit Identity" value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
-                        <InputField label="Cryptographic Bot Token" value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
+                        <InputField label={t("bot_unit_identity")} value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
+                        <InputField label={t("cryptographic_bot_token")} value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
                     </div>
                     <div className="flex items-center gap-4 mt-8">
                         <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer">
-                            {saving ? "Synchronizing..." : "Initialize Bot Unit"}
+                            {saving ? t("syncing") : t("initialize_bot_unit")}
                         </button>
                         <button onClick={() => setShowNewBot(false)} className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
-                            Abort
+                            {t("abort")}
                         </button>
                     </div>
                 </PremiumCard>
@@ -1130,7 +1189,7 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
                 <button onClick={() => setShowNewBot(true)} className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-blue-500/30 transition-all group cursor-pointer bg-navy-950/20">
                     <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-blue-500 transition-colors">
                         <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">Initialize New Telegram Unit</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
                     </div>
                 </button>
             )}
@@ -1138,7 +1197,7 @@ function TelegramTab({ instances, presets, loadStats, onRefresh }: { instances: 
     );
 }
 
-function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void }) {
+function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: () => void, t: any }) {
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState({
         bot_link: preset.bot_link || "",
@@ -1175,20 +1234,20 @@ function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void 
                     </div>
 
                     <InputField
-                        label="Unified Bot Link (t.me/)"
+                        label={t("unified_bot_link")}
                         value={form.bot_link}
                         onChange={(v) => setForm({ ...form, bot_link: v })}
                         placeholder="https://t.me/UnitAlpha"
                     />
                     <div className="grid grid-cols-2 gap-6">
                         <InputField
-                            label="Operational Alias (@)"
+                            label={t("operational_alias")}
                             value={form.telegram_bot_username}
                             onChange={(v) => setForm({ ...form, telegram_bot_username: v })}
                             placeholder="UnitAlphaBot"
                         />
                         <InputField
-                            label="WhatsApp Liaison"
+                            label={t("whatsapp_liaison")}
                             value={form.whatsapp_support_number}
                             onChange={(v) => setForm({ ...form, whatsapp_support_number: v })}
                             placeholder="5511999999999"
@@ -1201,7 +1260,7 @@ function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void 
                             disabled={saving}
                             className="px-6 py-3 bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest rounded-none hover:bg-brand-600 disabled:opacity-50 transition-all"
                         >
-                            {saving ? "Synchronizing..." : "Update Protocol"}
+                            {saving ? t("syncing") : t("update_protocol")}
                         </button>
                     </div>
                 </div>
@@ -1219,14 +1278,14 @@ function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void 
                                 {preset.bot_link} <ArrowUpRight className="h-3 w-3" />
                             </a>
                         ) : (
-                            <p className="text-[10px] font-black text-amber-500/60 mt-2 uppercase tracking-widest italic">Protocol Missing Link</p>
+                            <p className="text-[10px] font-black text-amber-500/60 mt-2 uppercase tracking-widest italic">{t("protocol_missing_link")}</p>
                         )}
                         {preset.telegram_bot_username && <p className="text-[10px] font-black text-secondary-gray-600 mt-1 uppercase tracking-widest">@{preset.telegram_bot_username}</p>}
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
                         <div className="text-right hidden sm:block">
-                            <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-widest mb-1">Context Integrity</p>
-                            <p className="text-[11px] font-black text-white uppercase tracking-tighter">{preset.preserve_context ? "Operational" : "Detached"}</p>
+                            <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-widest mb-1">{t("context_integrity")}</p>
+                            <p className="text-[11px] font-black text-white uppercase tracking-tighter">{preset.preserve_context ? t("status_open") : t("status_dormant")}</p>
                         </div>
                         <StatusBadge active={preset.is_active} />
                     </div>
@@ -1236,7 +1295,7 @@ function PresetCard({ preset, onRefresh }: { preset: any; onRefresh: () => void 
     );
 }
 
-function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings: Record<string, string>; onRefresh: () => void }) {
+function MonitorTab({ usage, aiSettings, onRefresh, t }: { usage: TokenUsage[]; aiSettings: Record<string, string>; onRefresh: () => void, t: any }) {
     const maxTokens = Math.max(...usage.map((u) => u.tokens), 1);
 
     const platformColors: Record<string, string> = {
@@ -1249,22 +1308,22 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
             {/* Tokens Section */}
             <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatCard icon={<Brain />} color="amber" label="Total Tokens" value={usage.reduce((a, b) => a + b.tokens, 0).toLocaleString()} sub="consumidos" />
-                    <StatCard icon={<Activity />} color="amber" label="Canais Ativos" value={usage.length} sub="com consumo" />
-                    <StatCard icon={<AlertTriangle />} color="amber" label="Top Consumidor" value={usage[0]?.name || "—"} sub={usage[0] ? `${usage[0].tokens.toLocaleString()} tokens` : ""} />
+                    <StatCard icon={<Brain />} color="amber" label={t("total_tokens")} value={usage.reduce((a, b) => a + b.tokens, 0).toLocaleString()} sub={t("consumidos")} />
+                    <StatCard icon={<Activity />} color="amber" label={t("active_channels")} value={usage.length} sub={t("with_consumption")} />
+                    <StatCard icon={<AlertTriangle />} color="amber" label={t("top_consumer")} value={usage[0]?.name || "—"} sub={usage[0] ? `${usage[0].tokens.toLocaleString()} tokens` : ""} />
                 </div>
 
                 <PremiumCard className="p-8 bg-navy-950/20 border border-white/5 rounded-none">
                     <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3 uppercase tracking-tighter">
                         <Brain className="h-6 w-6 text-amber-500" />
-                        Channel Ingestion Invariant Metrics
+                        {t("metrics_title")}
                     </h3>
 
                     {usage.length === 0 ? (
                         <div className="text-center py-16 bg-navy-950/40 border border-dashed border-white/5 rounded-none">
                             <Brain className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
-                            <p className="text-white font-black uppercase tracking-widest text-[11px]">No Ingestion Recorded</p>
-                            <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose">Metrics will populate upon first protocol execution.</p>
+                            <p className="text-white font-black uppercase tracking-widest text-[11px]">{t("no_ingestion")}</p>
+                            <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose">{t("metrics_wait")}</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
@@ -1309,37 +1368,59 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
                 <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
                     <h2 className="text-xl font-black text-white tracking-widest flex items-center gap-4 uppercase">
                         <Settings className="h-6 w-6 text-brand-500" />
-                        Neural Protocol Keys
+                        {t("neural_protocol_keys")}
                     </h2>
                     <span className="text-[9px] font-black uppercase tracking-[0.3em] text-secondary-gray-600 px-4 py-1.5 border border-white/5 rounded-none">
-                        Core Override
+                        {t("core_override")}
                     </span>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                    <AIKeyCard
+                        title="X-AI Identity Protocol"
+                        configKey="XAI_API_KEY"
+                        currentValue={aiSettings.XAI_API_KEY}
+                        onSave={onRefresh}
+                        description="Grok Neural Fabric Integration"
+                        t={t}
+                    />
+                    <AIKeyCard
+                        title="Mistral Core Unit"
+                        configKey="MISTRAL_API_KEY"
+                        currentValue={aiSettings.MISTRAL_API_KEY}
+                        onSave={onRefresh}
+                        description="European Neural Architecture"
+                        t={t}
+                    />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <AIKeyCard
                         title="Google Gemini"
                         configKey="GOOGLE_API_KEY"
                         currentValue={aiSettings.GOOGLE_API_KEY}
                         onSave={onRefresh}
+                        t={t}
                     />
                     <AIKeyCard
                         title="OpenAI"
                         configKey="OPENAI_API_KEY"
                         currentValue={aiSettings.OPENAI_API_KEY}
                         onSave={onRefresh}
+                        t={t}
                     />
                     <AIKeyCard
                         title="Anthropic"
                         configKey="ANTHROPIC_API_KEY"
                         currentValue={aiSettings.ANTHROPIC_API_KEY}
                         onSave={onRefresh}
+                        t={t}
                     />
                     <AIKeyCard
                         title="Groq"
                         configKey="GROQ_API_KEY"
                         currentValue={aiSettings.GROQ_API_KEY}
                         onSave={onRefresh}
+                        t={t}
                     />
                     <div className="md:col-span-2">
                         <AIKeyCard
@@ -1348,6 +1429,7 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
                             currentValue={aiSettings.LOVABLE_API_KEY}
                             onSave={onRefresh}
                             description="Chave mestra usada como fallback quando o provedor não tem chave específica."
+                            t={t}
                         />
                     </div>
                 </div>
@@ -1358,10 +1440,10 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
                             <Shield className="h-6 w-6 text-blue-500" />
                         </div>
                         <div>
-                            <p className="text-[13px] font-black text-white uppercase tracking-widest">Protocol Guard: Neural Safety</p>
+                            <p className="text-[13px] font-black text-white uppercase tracking-widest">{t("protocol_guard_title")}</p>
                             <p className="text-[11px] text-secondary-gray-500 mt-2 uppercase tracking-widest leading-loose">
-                                All keys are encrypted at rest and masked during transmission.
-                                <strong className="text-brand-500 ml-2"> Operational Note:</strong> Global overrides impact every neural-processed batch within the sovereignty.
+                                {t("protocol_guard_desc")}
+                                <strong className="text-brand-500 ml-2"> {t("operational_note")}</strong> {t("operational_note_desc")}
                             </p>
                         </div>
                     </div>
@@ -1371,12 +1453,13 @@ function MonitorTab({ usage, aiSettings, onRefresh }: { usage: any[]; aiSettings
     );
 }
 
-function AIKeyCard({ title, configKey, currentValue, onSave, description }: {
+function AIKeyCard({ title, configKey, currentValue, onSave, description, t }: {
     title: string;
     configKey: string;
     currentValue: string;
     onSave: () => void;
     description?: string;
+    t: any;
 }) {
     const [value, setValue] = useState("");
     const [showKey, setShowKey] = useState(false);
@@ -1410,13 +1493,13 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description }: {
                     "px-3 py-1 rounded-none text-[9px] font-black uppercase tracking-[0.2em] border",
                     currentValue ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
                 )}>
-                    {currentValue ? "OPERATIONAL" : "PENDING"}
+                    {currentValue ? t("status_open").toUpperCase() : t("status_qr_ready").toUpperCase()}
                 </div>
             </div>
 
             <div className="space-y-3">
                 <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-secondary-gray-600 px-1">
-                    <span>{currentValue ? "Active Protocol ID" : "Initialize Key"}</span>
+                    <span>{currentValue ? "Active Protocol ID" : t("initialize_unit")}</span>
                 </div>
                 <div className="relative">
                     <input
@@ -1452,7 +1535,7 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description }: {
 
 // ─── Tab 5: Gestão de Mensagens (Templates) ───
 
-function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templates: any[]; globalTemplateSettings: Record<string, string>; onRefresh: () => void }) {
+function MessagesTab({ templates, globalTemplateSettings, onRefresh, t }: { templates: WhatsAppTemplate[]; globalTemplateSettings: Record<string, string>; onRefresh: () => void, t: any }) {
     const [showNew, setShowNew] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [mappingSaving, setMappingSaving] = useState(false);
@@ -1462,11 +1545,11 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
         try {
             const res = await syncMetaTemplates();
             if (res.success) {
-                alert(`Sincronização concluída! ${res.count} templates processados.`);
+                alert(`${t("conected_success")} ${res.count} templates processados.`);
                 onRefresh();
             }
         } catch (e: any) {
-            alert(e.message || "Erro ao sincronizar templates");
+            alert(e.message || t("connection_failed"));
         } finally {
             setSyncing(false);
         }
@@ -1487,8 +1570,8 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <StatCard icon={<MessageSquare />} color="blue" label="Templates Ativos" value={templates.filter(t => t.is_active).length} sub="configurados" />
-                <StatCard icon={<Globe />} color="blue" label="Idiomas" value={new Set(templates.map(t => t.language)).size} sub="suportados" />
+                <StatCard icon={<MessageSquare />} color="blue" label={t("active_channels")} value={templates.filter(t => t.is_active).length} sub={t("configuradas")} />
+                <StatCard icon={<Globe />} color="blue" label={t("channels")} value={new Set(templates.map(t => t.language)).size} sub={t("monitored")} />
             </div>
 
             <PremiumCard className="p-8 bg-navy-950/20 border-l-2 border-l-brand-500 rounded-none group hover:bg-navy-950/40 transition-all">
@@ -1511,7 +1594,7 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
                                 disabled={mappingSaving}
                                 className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all cursor-pointer hover:bg-white/5 appearance-none"
                             >
-                                <option value="" className="bg-navy-950">UNLINKED</option>
+                                <option value="" className="bg-navy-950">{t("unlinked")}</option>
                                 {templates
                                     .filter(t => t.platform === 'meta')
                                     .map(t => (
@@ -1522,7 +1605,7 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
                         </div>
                     ))}
                 </div>
-                {mappingSaving && <p className="text-[9px] text-brand-500 font-black uppercase tracking-[0.3em] mt-6 animate-pulse px-1">Synchronizing Sovereignty Protocol...</p>}
+                {mappingSaving && <p className="text-[9px] text-brand-500 font-black uppercase tracking-[0.3em] mt-6 animate-pulse px-1">{t("syncing")}</p>}
             </PremiumCard>
 
             <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
@@ -1537,14 +1620,14 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
                         className="flex items-center gap-3 px-6 py-3 bg-navy-950 border border-white/5 hover:bg-white/5 text-secondary-gray-500 hover:text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer disabled:opacity-50"
                     >
                         <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                        {syncing ? "Synching Meta..." : "Sync Meta Protocols"}
+                        {syncing ? t("syncing") : t("sync")}
                     </button>
                     {!showNew && (
                         <button
                             onClick={() => setShowNew(true)}
                             className="flex items-center gap-3 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer shadow-lg shadow-brand-500/10"
                         >
-                            <Plus className="h-4 w-4" /> New Protocol
+                            <Plus className="h-4 w-4" /> {t("initialize_protocol")}
                         </button>
                     )}
                 </div>
@@ -1552,17 +1635,17 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
 
             <div className="grid grid-cols-1 gap-4">
                 {showNew && (
-                    <TemplateCard config={null} isNew onRefresh={() => { setShowNew(false); onRefresh(); }} onCancel={() => setShowNew(false)} />
+                    <TemplateCard config={null} isNew onRefresh={() => { setShowNew(false); onRefresh(); }} onCancel={() => setShowNew(false)} t={t} />
                 )}
                 {templates.map((tmpl) => (
-                    <TemplateCard key={tmpl.id} config={tmpl} onRefresh={onRefresh} />
+                    <TemplateCard key={tmpl.id} config={tmpl} onRefresh={onRefresh} t={t} />
                 ))}
 
                 {templates.length === 0 && !showNew && (
                     <div className="text-center py-24 bg-navy-950/20 border-2 border-dashed border-white/5 rounded-none">
                         <MessageSquare className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
-                        <p className="text-white font-black uppercase tracking-widest text-[11px]">No Message Templates Detected</p>
-                        <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose max-w-sm mx-auto">Initialize Meta or Evolution protocols to begin automated dispatch operations.</p>
+                        <p className="text-white font-black uppercase tracking-widest text-[11px]">{t("no_templates")}</p>
+                        <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose max-w-sm mx-auto">{t("unit_identity_desc")}</p>
                     </div>
                 )}
             </div>
@@ -1570,7 +1653,7 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh }: { templat
     );
 }
 
-function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isNew?: boolean; onRefresh: () => void; onCancel?: () => void }) {
+function TemplateCard({ config, isNew, onRefresh, onCancel, t }: { config: WhatsAppTemplate | null; isNew?: boolean; onRefresh: () => void; onCancel?: () => void, t: any }) {
     const [form, setForm] = useState({
         name: config?.name || "",
         platform: config?.platform || "meta",
@@ -1592,7 +1675,7 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
     };
 
     const handleDelete = async () => {
-        if (!config?.id || !confirm("Remover este template?")) return;
+        if (!config?.id || !confirm(t("connection_failed"))) return;
         await deleteWhatsAppTemplate(config.id);
         onRefresh();
     };
@@ -1609,7 +1692,7 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
                     </div>
                     <div>
                         <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
-                            {isNew ? "Initialize New Message Protocol" : form.name}
+                            {isNew ? t("initialize_new_unit") : form.name}
                         </h3>
                         <div className="flex items-center gap-4 mt-3">
                             <span className={cn(
@@ -1618,7 +1701,7 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
                             )}>
                                 {form.platform} INTERFACE
                             </span>
-                            {!isNew && <StatusBadge active={form.is_active} />}
+                            {!isNew && <StatusBadge active={form.is_active} t={t} />}
                         </div>
                     </div>
                 </div>
@@ -1630,26 +1713,26 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <InputField label="Protocol Identifier" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="daily_summary_alpha" />
+                <InputField label={t("protocol_identifier")} value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="daily_summary_alpha" />
 
                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Infrastructure Platform</label>
+                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("infrastructure_platform")}</label>
                     <select
                         value={form.platform}
                         onChange={(e) => setForm({ ...form, platform: e.target.value as any })}
                         className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all appearance-none"
                     >
-                        <option value="meta" className="bg-navy-950">META OFFICIAL UNIT</option>
-                        <option value="evolution" className="bg-navy-950">EVOLUTION API UNIT</option>
+                        <option value="meta" className="bg-navy-950">{t("meta_official_unit")}</option>
+                        <option value="evolution" className="bg-navy-950">{t("evolution_api_unit")}</option>
                     </select>
                 </div>
 
-                <InputField label="Category Manifest" value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="MARKETING_A1" />
-                <InputField label="Language Locale" value={form.language} onChange={(v) => setForm({ ...form, language: v })} placeholder="PT_BR_UTF8" />
+                <InputField label={t("category_manifest")} value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="MARKETING_A1" />
+                <InputField label={t("language_locale")} value={form.language} onChange={(v) => setForm({ ...form, language: v })} placeholder="PT_BR_UTF8" />
             </div>
 
             <div className="mt-8 space-y-3">
-                <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">Protocol Content Payload / JSON Schema</label>
+                <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("protocol_payload")}</label>
                 <textarea
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
@@ -1665,11 +1748,11 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
                     className="flex-1 sm:flex-none px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                     {saving ? <RefreshCw className="h-4 w-4 animate-spin inline mr-3" /> : <Save className="h-4 w-4 inline mr-3" />}
-                    {saving ? "Synchronizing..." : "Authorize Protocol"}
+                    {saving ? t("syncing") : t("authorize_protocol")}
                 </button>
                 {isNew && onCancel && (
                     <button onClick={onCancel} className="px-12 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all cursor-pointer">
-                        Abort Initialization
+                        {t("abort_initialization")}
                     </button>
                 )}
             </div>
@@ -1682,35 +1765,35 @@ function TemplateCard({ config, isNew, onRefresh, onCancel }: { config: any; isN
 const PROMPT_DEFINITIONS = [
     {
         id: "PROMPT_SUMMARY_SYSTEM",
-        label: "Executive Logic",
-        description: "Neural core for high-density summary generation and mapping.",
+        labelKey: "executive_logic",
+        descKey: "executive_logic_desc",
         placeholder: "Initialize Executive Persona Alpha... (Define operational constraints)",
         icon: <Brain className="h-5 w-5 text-brand-500" />
     },
     {
         id: "PROMPT_ALERT_SYSTEM",
-        label: "Anomaly Detection",
-        description: "Protocol core for heuristic risk identification and triage.",
+        labelKey: "anomaly_detection",
+        descKey: "anomaly_detection_desc",
         placeholder: "Analyze batch ingestions for non-compliance... (Define tripwires)",
         icon: <Shield className="h-5 w-5 text-amber-500" />
     },
     {
         id: "PROMPT_INSIGHT_SYSTEM",
-        label: "Behavioral Analytics",
-        description: "Psychometric engine for extraction of unit interactions.",
+        labelKey: "behavioral_analytics",
+        descKey: "behavioral_analytics_desc",
         placeholder: "Detect cognitive behavioral patterns... (Define analytical focus)",
         icon: <Lightbulb className="h-5 w-5 text-blue-500" />
     },
     {
         id: "TELEGRAM_BOT_LINK",
-        label: "TG Unit Liaison",
-        description: "Global bot invariant used for unit onboarding (t.me/unit).",
+        labelKey: "tg_liaison",
+        descKey: "tg_liaison_desc",
         placeholder: "t.me/unit_id",
         icon: <Send className="h-5 w-5 text-secondary-gray-500" />
     }
 ];
 
-function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, string>; onRefresh: () => void }) {
+function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, string>; onRefresh: () => void, t: any }) {
     const [selectedPromptId, setSelectedPromptId] = useState<string>("PROMPT_SUMMARY_SYSTEM");
     const [localValue, setLocalValue] = useState("");
     const [saving, setSaving] = useState(false);
@@ -1726,12 +1809,12 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
         console.log(`[PromptsTab] Saving ${selectedPromptId}:`, localValue.length);
         setSaving(true);
         try {
-            const result = await saveAISetting(selectedPromptId, localValue, activeDef.description);
+            const result = await saveAISetting(selectedPromptId, localValue, t(activeDef.descKey));
             console.log("[PromptsTab] Save result:", result);
             onRefresh();
-            alert(`${activeDef.label} atualizado com sucesso!`);
+            alert(`${t(activeDef.labelKey)} ${t("conected_success")}`);
         } catch (e: any) {
-            alert("Erro ao salvar: " + e.message);
+            alert(t("connection_failed") + ": " + e.message);
         } finally {
             setSaving(false);
         }
@@ -1741,7 +1824,7 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-7xl mx-auto h-[calc(100vh-250px)] min-h-[600px]">
             {/* Sidebar List */}
             <div className="md:col-span-4 bg-navy-950/20 border border-white/5 rounded-none p-4 overflow-y-auto">
-                <h3 className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-[0.3em] mb-6 px-4">Neural Protocol Inventory</h3>
+                <h3 className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-[0.3em] mb-6 px-4">{t("neural_protocol_inventory")}</h3>
                 <div className="space-y-3">
                     {PROMPT_DEFINITIONS.map((def) => (
                         <button
@@ -1766,10 +1849,10 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
                                         "text-[12px] font-black uppercase tracking-widest leading-none",
                                         selectedPromptId === def.id ? "text-white" : "text-secondary-gray-500 group-hover:text-white"
                                     )}>
-                                        {def.label}
+                                        {t(def.labelKey)}
                                     </h4>
                                     <p className="text-secondary-gray-700 text-[9px] mt-2 uppercase tracking-widest line-clamp-2 leading-relaxed font-bold">
-                                        {def.description}
+                                        {t(def.descKey)}
                                     </p>
                                 </div>
                             </div>
@@ -1790,7 +1873,7 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
                                 {activeDef.icon}
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{activeDef.label}</h2>
+                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{t(activeDef.labelKey)}</h2>
                                 <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.3em] mt-2 opacity-80">{activeDef.id}</p>
                             </div>
                         </div>
@@ -1800,7 +1883,7 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
                             className="px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            {saving ? "Synchronizing..." : "Update Protocol"}
+                            {saving ? t("syncing") : t("update_protocol_btn")}
                         </button>
                     </div>
 
@@ -1821,7 +1904,7 @@ function PromptsTab({ aiSettings, onRefresh }: { aiSettings: Record<string, stri
                             <Info className="h-5 w-5 text-brand-500" />
                         </div>
                         <p className="text-[10px] text-secondary-gray-500 uppercase tracking-widest leading-loose font-bold">
-                            This instruction defines the <strong className="text-white font-black">Global Invariant</strong> for this neural task. Specificity increases protocol integrity.
+                            {t("protocol_integrity_note")}
                         </p>
                     </div>
                 </PremiumCard>
@@ -1864,14 +1947,14 @@ function StatCard({ icon, color, label, value, sub }: { icon: ReactNode; color: 
     );
 }
 
-function StatusBadge({ active }: { active: boolean }) {
+function StatusBadge({ active, t }: { active: boolean, t: any }) {
     return (
         <div className={cn(
             "flex items-center gap-1.5 px-3 py-1 rounded-none border text-[9px] font-black uppercase tracking-widest w-fit",
             active ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
         )}>
             <div className={cn("h-1.5 w-1.5 bg-current", active ? "animate-pulse" : "")} />
-            {active ? "Operational" : "Offline"}
+            {active ? t("status_open") : t("status_offline")}
         </div>
     );
 }

@@ -14,17 +14,19 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 export default async function PlanConfigurationPage() {
+    const t = await getTranslations("plans");
     const plans = await getPlans();
     const alerts = await getSubscriptionAlerts();
 
     return (
         <div className="space-y-6 pb-12">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Plan configuration</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Configure resource quotas, retention cycles, and Stripe mappings.
+                    {t("subtitle")}
                 </p>
             </div>
 
@@ -35,7 +37,7 @@ export default async function PlanConfigurationPage() {
                         <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center">
                             <Settings2 className="h-3.5 w-3.5 text-primary" />
                         </div>
-                        <h2 className="text-sm font-semibold text-foreground">Plan settings</h2>
+                        <h2 className="text-sm font-semibold text-foreground">{t("plan_settings")}</h2>
                     </div>
 
                     <div className="space-y-4">
@@ -46,7 +48,7 @@ export default async function PlanConfigurationPage() {
                         ))}
                         {plans.length === 0 && (
                             <PremiumCard className="py-12 text-center">
-                                <p className="text-sm text-muted-foreground">No plans configured.</p>
+                                <p className="text-sm text-muted-foreground">{t("no_plans")}</p>
                             </PremiumCard>
                         )}
                     </div>
@@ -61,7 +63,7 @@ export default async function PlanConfigurationPage() {
                                 <div className="w-7 h-7 bg-destructive/10 rounded-lg flex items-center justify-center">
                                     <AlertCircle className="h-3.5 w-3.5 text-destructive" />
                                 </div>
-                                <h2 className="text-sm font-semibold text-foreground">Subscription alerts</h2>
+                                <h2 className="text-sm font-semibold text-foreground">{t("subscription_alerts")}</h2>
                             </div>
                             {alerts.length > 0 && (
                                 <Badge variant="destructive" className="text-xs">{alerts.length}</Badge>
@@ -72,7 +74,7 @@ export default async function PlanConfigurationPage() {
                             {alerts.length === 0 ? (
                                 <div className="py-8 text-center">
                                     <CheckCircle2 className="h-7 w-7 text-green-500 mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">All subscriptions healthy</p>
+                                    <p className="text-sm text-muted-foreground">{t("healthy_subscriptions")}</p>
                                 </div>
                             ) : (
                                 alerts.map((alert) => (
@@ -101,7 +103,7 @@ export default async function PlanConfigurationPage() {
 
                         <div className="px-4 py-3 border-t border-border bg-muted/30">
                             <Button variant="outline" className="w-full gap-2 text-xs h-8">
-                                Full control dashboard <ExternalLink className="h-3 w-3" />
+                                {t("full_control_dashboard")} <ExternalLink className="h-3 w-3" />
                             </Button>
                         </div>
                     </PremiumCard>
@@ -112,13 +114,13 @@ export default async function PlanConfigurationPage() {
                             <CreditCard className="h-5 w-5 text-primary" />
                         </div>
                         <div className="space-y-1">
-                            <h4 className="text-sm font-semibold text-foreground">Stripe portal</h4>
+                            <h4 className="text-sm font-semibold text-foreground">{t("stripe_portal")}</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Access the Stripe dashboard for reconciliation, coupons, and financial metrics.
+                                {t("stripe_portal_desc")}
                             </p>
                         </div>
                         <Button className="w-full gap-2">
-                            <ExternalLink className="h-4 w-4" /> Open Stripe Portal
+                            <ExternalLink className="h-4 w-4" /> {t("open_stripe_portal")}
                         </Button>
                     </PremiumCard>
                 </div>

@@ -6,28 +6,10 @@ import { motion } from "framer-motion";
 import { PremiumCard } from "@/components/ui/PremiumCard";
 import { IgnoHubLogo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
-
 export default function Home() {
   const t = useTranslations("landing");
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 },
-  };
 
   const features = [
     { icon: Shield, title: t('feature_isolation_title'), desc: t('feature_isolation_desc') },

@@ -30,9 +30,9 @@ const getApiKey = (config?: EvolutionConfig) => {
     return key;
 };
 
-async function evoFetch<T = any>(
+async function evoFetch<T = unknown>(
     path: string,
-    options: { method?: string; body?: any; config?: EvolutionConfig } = {}
+    options: { method?: string; body?: unknown; config?: EvolutionConfig } = {}
 ): Promise<T> {
     const { method = "GET", body, config } = options;
     const res = await fetch(`${getBaseUrl(config)}${path}`, {
@@ -70,7 +70,7 @@ export interface InstanceInfo {
 }
 
 export async function createInstance(name: string, config?: EvolutionConfig) {
-    return evoFetch<any>("/instance/create", {
+    return evoFetch<unknown>("/instance/create", {
         method: "POST",
         body: {
             instanceName: name,
@@ -86,7 +86,7 @@ export async function fetchInstances(config?: EvolutionConfig) {
 }
 
 export async function deleteInstance(name: string, config?: EvolutionConfig) {
-    return evoFetch<any>(`/instance/delete/${name}`, { method: "DELETE", config });
+    return evoFetch<unknown>(`/instance/delete/${name}`, { method: "DELETE", config });
 }
 
 // ─── Connection / QR Code ───
@@ -124,7 +124,7 @@ export interface InstanceSettings {
 }
 
 export async function setSettings(name: string, settings: InstanceSettings, config?: EvolutionConfig) {
-    return evoFetch<any>(`/settings/set/${name}`, {
+    return evoFetch<unknown>(`/settings/set/${name}`, {
         method: "POST",
         body: settings,
         config,
@@ -157,7 +157,7 @@ export async function fetchGroups(name: string, config?: EvolutionConfig) {
 // ─── Messages ───
 
 export async function sendTextMessage(instanceName: string, number: string, text: string, config?: EvolutionConfig) {
-    return evoFetch<any>(`/message/sendText/${instanceName}`, {
+    return evoFetch<unknown>(`/message/sendText/${instanceName}`, {
         method: "POST",
         body: {
             number,
@@ -172,7 +172,7 @@ export async function sendTextMessage(instanceName: string, number: string, text
 // ─── Webhook ───
 
 export async function setWebhook(name: string, webhookUrl: string, events: string[], config?: EvolutionConfig) {
-    return evoFetch<any>(`/webhook/set/${name}`, {
+    return evoFetch<unknown>(`/webhook/set/${name}`, {
         method: "POST",
         body: {
             url: webhookUrl,

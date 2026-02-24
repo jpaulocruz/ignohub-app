@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -12,39 +12,37 @@ import {
 import { Button } from "@/components/ui/button";
 
 const LOCALES = [
-    { code: "pt", label: "Português", flag: "🇧🇷" },
-    { code: "en", label: "English", flag: "🇺🇸" },
+    { code: "pt", name: "Português", flag: "🇧🇷" },
+    { code: "en", name: "English", flag: "🇺🇸" },
 ] as const;
 
 export function LocaleSwitcher() {
     const locale = useLocale();
 
-    const switchLocale = (newLocale: string) => {
-        document.cookie = `locale=${newLocale};path=/;max-age=${60 * 60 * 24 * 365}`;
+    const handleSwitch = (lang: string) => {
+        document.cookie = `NEXT_LOCALE=${lang}; path=/; max-age=31536000; SameSite=Lax`;
         window.location.reload();
     };
-
-    const current = LOCALES.find((l) => l.code === locale) || LOCALES[0];
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
                     <Languages className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-32">
+            <DropdownMenuContent align="end">
                 {LOCALES.map((loc) => (
                     <DropdownMenuItem
                         key={loc.code}
-                        onClick={() => switchLocale(loc.code)}
+                        onClick={() => handleSwitch(loc.code)}
                         className={cn(
-                            "cursor-pointer gap-2",
-                            locale === loc.code && "font-semibold"
+                            "flex items-center gap-2 cursor-pointer",
+                            locale === loc.code && "bg-accent"
                         )}
                     >
-                        <span>{loc.flag}</span>
-                        <span>{loc.label}</span>
+                        <span className="text-base">{loc.flag}</span>
+                        <span>{loc.name}</span>
                     </DropdownMenuItem>
                 ))}
             </DropdownMenuContent>

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 interface UsageMetric {
     id: string;
@@ -40,6 +41,7 @@ export default function UsageMonitorPage() {
     const [usageMetrics, setUsageMetrics] = useState<UsageMetric[]>([]);
     const [comparisonData, setComparisonData] = useState<ComparisonDatum[]>([]);
     const [loading, setLoading] = useState(true);
+    const t = useTranslations("monitoring");
 
     useEffect(() => {
         async function fetchData() {
@@ -78,9 +80,9 @@ export default function UsageMonitorPage() {
     return (
         <div className="space-y-6 pb-12">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Usage Monitor</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    Real-time ingestion monitoring and AI token consumption across organizations.
+                    {t('subtitle')}
                 </p>
             </div>
 
@@ -93,8 +95,8 @@ export default function UsageMonitorPage() {
                                 <BarChart3 className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground">Consumption profile</h3>
-                                <Badge variant="secondary" className="text-[10px] mt-0.5">Live</Badge>
+                                <h3 className="text-sm font-semibold text-foreground">{t('consumption_profile')}</h3>
+                                <Badge variant="secondary" className="text-[10px] mt-0.5">{t('live_badge')}</Badge>
                             </div>
                         </div>
                         <div className="p-5">
@@ -106,9 +108,9 @@ export default function UsageMonitorPage() {
                 {/* Stats */}
                 <div className="lg:col-span-4 space-y-4">
                     {[
-                        { label: "Total batches", value: "1.2K", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
-                        { label: "Active organizations", value: String(usageMetrics.length), icon: Users, color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" },
-                        { label: "Tokens processed", value: `${(totalTokens / 1000).toFixed(1)}K`, icon: Zap, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
+                        { label: t("total_batches"), value: "1.2K", icon: Activity, color: "text-primary", bg: "bg-primary/10" },
+                        { label: t("active_orgs"), value: String(usageMetrics.length), icon: Users, color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" },
+                        { label: t("tokens_processed"), value: `${(totalTokens / 1000).toFixed(1)}K`, icon: Zap, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-900/30" },
                     ].map(({ label, value, icon: Icon, color, bg }) => (
                         <PremiumCard key={label} className="p-4 flex items-center gap-4">
                             <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", bg)}>
@@ -129,18 +131,18 @@ export default function UsageMonitorPage() {
                             <div className="h-8 w-8 bg-muted rounded-lg flex items-center justify-center">
                                 <LayoutGrid className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            <h3 className="text-sm font-semibold text-foreground">Organization registry</h3>
+                            <h3 className="text-sm font-semibold text-foreground">{t("org_registry")}</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-border bg-muted/40">
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Organization</th>
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Plan</th>
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Messages</th>
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">AI tokens</th>
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Quota usage</th>
-                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">Status</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_org")}</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_plan")}</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_messages")}</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_tokens")}</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_usage")}</th>
+                                        <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground">{t("th_status")}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
@@ -184,11 +186,11 @@ export default function UsageMonitorPage() {
                                                 <td className="px-5 py-4">
                                                     {isNearLimit ? (
                                                         <Badge variant="destructive" className="gap-1 text-xs">
-                                                            <AlertTriangle className="h-3 w-3" /> Near limit
+                                                            <AlertTriangle className="h-3 w-3" /> {t("near_limit")}
                                                         </Badge>
                                                     ) : (
                                                         <Badge variant="secondary" className="gap-1 text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30">
-                                                            <CheckCircle2 className="h-3 w-3" /> Healthy
+                                                            <CheckCircle2 className="h-3 w-3" /> {t("healthy")}
                                                         </Badge>
                                                     )}
                                                 </td>
@@ -200,7 +202,7 @@ export default function UsageMonitorPage() {
                             {usageMetrics.length === 0 && (
                                 <div className="py-16 text-center">
                                     <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                                    <p className="text-sm text-muted-foreground">No usage data yet.</p>
+                                    <p className="text-sm text-muted-foreground">{t("no_usage")}</p>
                                 </div>
                             )}
                         </div>

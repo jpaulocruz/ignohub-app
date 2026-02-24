@@ -7,7 +7,7 @@ interface SummaryDetailModalProps {
     summary: {
         id: string
         summary_text: string
-        highlights: any
+        highlights: Record<string, unknown> | null | undefined
         period_start: string
         period_end: string
     }
@@ -51,7 +51,7 @@ export function SummaryDetailModal({ summary, onClose }: SummaryDetailModalProps
                         <div className="space-y-2">
                             <h3 className="text-sm font-medium text-foreground">Highlights</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {Object.entries(summary.highlights).map(([key, value]: [string, any]) => (
+                                {Object.entries(summary.highlights || {}).map(([key, value]) => (
                                     <div key={key} className="p-3 rounded-lg border border-border bg-card flex gap-3">
                                         <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                                             <LucideZap className="h-3.5 w-3.5" />

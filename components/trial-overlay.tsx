@@ -23,7 +23,7 @@ export function TrialOverlay() {
                 <div className="space-y-2">
                     <h2 className="text-lg font-semibold text-foreground">Trial expired</h2>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                        Your 7-day trial has ended. Activate a subscription to continue accessing your organization's summaries and metrics.
+                        Essa conta está no plano de teste. Os recursos são limitados e os dados serão limpos após o período de avaliação. &apos;Upgrade&apos; para liberar tudo.
                     </p>
                 </div>
 

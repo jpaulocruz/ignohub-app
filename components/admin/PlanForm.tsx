@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Save, Layers, Clock, DollarSign, CheckCircle2, RefreshCw } from "lucide-react";
 import { updatePlanConfig } from "@/app/(admin)/plans/actions";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface PlanFormProps {
     plan: {
@@ -18,6 +19,7 @@ interface PlanFormProps {
 }
 
 export function PlanForm({ plan }: PlanFormProps) {
+    const t = useTranslations("plans");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [formData, setFormData] = useState({
@@ -40,7 +42,7 @@ export function PlanForm({ plan }: PlanFormProps) {
             setTimeout(() => setSuccess(false), 3000);
         } catch (error) {
             console.error(error);
-            alert("Erro ao salvar plano.");
+            alert(t("connection_failed"));
         } finally {
             setLoading(false);
         }
@@ -53,18 +55,18 @@ export function PlanForm({ plan }: PlanFormProps) {
                 {plan.stripe_price_id ? (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 dark:text-green-500 border border-green-500/20 rounded-md text-xs font-semibold">
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Sync Stripe OK
+                        {t("sync_stripe_ok")}
                     </div>
                 ) : (
                     <div className="px-2.5 py-1 bg-background border border-card-border text-text-muted rounded-md text-xs font-semibold">
-                        Local Only
+                        {t("local_only")}
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-muted ml-1">Máximo de Grupos</label>
+                    <label className="text-sm font-medium text-text-muted ml-1">{t("max_groups")}</label>
                     <div className="relative group">
                         <Layers className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-brand-500 transition-colors" />
                         <input
@@ -78,7 +80,7 @@ export function PlanForm({ plan }: PlanFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-muted ml-1">Retenção (Dias)</label>
+                    <label className="text-sm font-medium text-text-muted ml-1">{t("retention_days")}</label>
                     <div className="relative group">
                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-brand-500 transition-colors" />
                         <input
@@ -92,7 +94,7 @@ export function PlanForm({ plan }: PlanFormProps) {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium text-text-muted ml-1">Preço Mensal (R$)</label>
+                    <label className="text-sm font-medium text-text-muted ml-1">{t("monthly_price")}</label>
                     <div className="relative group">
                         <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-brand-500 transition-colors" />
                         <input
@@ -122,18 +124,18 @@ export function PlanForm({ plan }: PlanFormProps) {
                 ) : success ? (
                     <>
                         <CheckCircle2 className="h-4 w-4" />
-                        Configurações Salvas e Sincronizadas
+                        {t("settings_saved")}
                     </>
                 ) : (
                     <>
                         <Save className="h-4 w-4" />
-                        Atualizar Plano
+                        {t("update_plan")}
                     </>
                 )}
             </button>
 
             <p className="text-xs text-center text-text-muted px-4">
-                As alterações de preço e regras são enviadas automaticamente para o Stripe.
+                {t("stripe_auto_sync")}
             </p>
         </form>
     );

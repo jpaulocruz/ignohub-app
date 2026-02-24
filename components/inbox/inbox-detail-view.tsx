@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface InboxDetailViewProps {
-    item: any;
+    item: Record<string, unknown>;
     onUpdate: () => void;
 }
 
@@ -131,7 +131,7 @@ export function InboxDetailView({ item, onUpdate }: InboxDetailViewProps) {
                         Evidence
                     </div>
                     <blockquote className="pl-4 border-l-2 border-primary text-sm text-muted-foreground italic leading-relaxed">
-                        "{item.evidence_excerpt}"
+                        &quot;{item.evidence_excerpt}&quot;
                     </blockquote>
                 </div>
             )}
@@ -182,7 +182,7 @@ export function InboxDetailView({ item, onUpdate }: InboxDetailViewProps) {
                 <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground">Highlights</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {Object.entries(item.highlights).map(([key, value]: [string, any]) => (
+                        {Object.entries((item.highlights as Record<string, unknown>) || {}).map(([key, value]) => (
                             <PremiumCard key={key} className="p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="w-7 h-7 bg-primary/10 rounded-md flex items-center justify-center text-primary shrink-0">

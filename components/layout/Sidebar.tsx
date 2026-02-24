@@ -3,10 +3,17 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-    LayoutDashboard, MessageSquare, Users, Settings,
-    LogOut, CreditCard, Shield, Activity, ChevronUp
+    LayoutDashboard,
+    MessageSquare,
+    Users,
+    Settings,
+    LogOut,
+    CreditCard,
+    Shield,
+    Activity,
+    ChevronUp
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import { useOrganization } from "@/hooks/use-organization";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslations } from "next-intl";
@@ -25,7 +32,6 @@ import {
     SidebarGroupLabel,
     SidebarGroupContent,
     SidebarRail,
-    SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
     DropdownMenu,

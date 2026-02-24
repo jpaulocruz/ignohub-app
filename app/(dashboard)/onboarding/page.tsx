@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { getOnboardingData, registerGroup, checkGroupSignal } from "./actions";
+import { useTranslations } from "next-intl";
 
 type Platform = "whatsapp" | "telegram" | null;
 
@@ -38,13 +39,13 @@ interface OnboardingData {
     botLink: string | null;
 }
 
-const STEPS = ["Platform", "Setup", "Verify", "Done"];
+const STEP_KEYS = ["step_platform", "step_setup", "step_verify", "step_done"];
 
-function ProgressBar({ step }: { step: number }) {
+function ProgressBar({ step, t }: { step: number; t: (key: string) => string }) {
     return (
         <div className="flex items-center gap-0 mb-8 max-w-sm mx-auto">
-            {STEPS.map((label, i) => (
-                <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
+            {STEP_KEYS.map((key, i) => (
+                <div key={key} className="flex-1 flex flex-col items-center gap-1.5">
                     <div className="relative w-full">
                         <div className="h-1 bg-muted rounded-full overflow-hidden">
                             <motion.div
@@ -56,7 +57,7 @@ function ProgressBar({ step }: { step: number }) {
                         </div>
                     </div>
                     <span className={`text-[10px] font-medium ${i <= step ? "text-primary" : "text-muted-foreground"}`}>
-                        {label}
+                        {t(key)}
                     </span>
                 </div>
             ))}
@@ -64,17 +65,17 @@ function ProgressBar({ step }: { step: number }) {
     );
 }
 
-function StepPlatform({ onSelect }: { onSelect: (p: Platform) => void }) {
+function StepPlatform({ onSelect, t }: { onSelect: (p: Platform) => void; t: (key: string) => string }) {
     return (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
             <div className="text-center space-y-2">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Setup
+                    {t('step_setup')}
                 </div>
-                <h1 className="text-2xl font-semibold text-foreground">Choose your platform</h1>
+                <h1 className="text-2xl font-semibold text-foreground">{t('choose_platform')}</h1>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Select the messaging platform where your community lives.
+                    {t('choose_platform_desc')}
                 </p>
             </div>
 
@@ -94,7 +95,7 @@ function StepPlatform({ onSelect }: { onSelect: (p: Platform) => void }) {
                             <p className="text-xs text-muted-foreground mt-0.5">Business API</p>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
-                            Connect <ArrowRight className="h-3.5 w-3.5" />
+                            {t('continue')} <ArrowRight className="h-3.5 w-3.5" />
                         </div>
                     </div>
                 </motion.button>
@@ -114,7 +115,7 @@ function StepPlatform({ onSelect }: { onSelect: (p: Platform) => void }) {
                             <p className="text-xs text-muted-foreground mt-0.5">Group / Supergroup</p>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 font-medium">
-                            Connect <ArrowRight className="h-3.5 w-3.5" />
+                            {t('continue')} <ArrowRight className="h-3.5 w-3.5" />
                         </div>
                     </div>
                 </motion.button>
@@ -125,11 +126,11 @@ function StepPlatform({ onSelect }: { onSelect: (p: Platform) => void }) {
 
 function StepInstruction({
     platform, data, groupName, setGroupName, groupDescription, setGroupDescription,
-    onNext, onBack, error,
+    onNext, onBack, error, t,
 }: {
     platform: Platform; data: OnboardingData; groupName: string; setGroupName: (v: string) => void;
     groupDescription: string; setGroupDescription: (v: string) => void;
-    onNext: () => void; onBack: () => void; error: string | null;
+    onNext: () => void; onBack: () => void; error: string | null; t: (key: string) => string;
 }) {
     const [copied, setCopied] = useState(false);
     const isWhatsApp = platform === "whatsapp";
@@ -149,46 +150,46 @@ function StepInstruction({
                     {isWhatsApp ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
                     {isWhatsApp ? "WhatsApp" : "Telegram"}
                 </Badge>
-                <h1 className="text-2xl font-semibold text-foreground">Configure your community</h1>
+                <h1 className="text-2xl font-semibold text-foreground">{t('configure_community')}</h1>
             </div>
 
             <PremiumCard className="p-5 space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="groupName">Community name</Label>
+                    <Label htmlFor="groupName">{t('community_name')}</Label>
                     <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                        <span className="font-semibold">Important:</span> The name must match the group name exactly, including special characters and spaces.
+                        <span className="font-semibold">Important:</span> {t('community_name_warning')}
                     </div>
                     <Input
                         id="groupName"
                         value={groupName}
                         onChange={(e) => setGroupName(e.target.value)}
-                        placeholder="My community name"
+                        placeholder={t('community_name_placeholder')}
                         className={error ? "border-destructive" : ""}
                     />
                     {error && <p className="text-xs text-destructive">{error}</p>}
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="desc">Description (optional)</Label>
+                    <Label htmlFor="desc">{t('description_optional')}</Label>
                     <Textarea
                         id="desc"
                         value={groupDescription}
                         onChange={(e) => setGroupDescription(e.target.value)}
-                        placeholder="What is this community about?"
+                        placeholder={t('description_placeholder')}
                         rows={3}
                         className="resize-none"
                     />
                 </div>
 
                 <div className="pt-2 border-t border-border space-y-3">
-                    <p className="text-sm font-medium text-foreground">Setup instructions</p>
+                    <p className="text-sm font-medium text-foreground">{t('setup_instructions')}</p>
 
                     {isWhatsApp ? (
                         <div className="space-y-3">
                             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
                                 <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">1</span>
                                 <div className="flex-1 space-y-2">
-                                    <p className="text-xs text-muted-foreground">Add this number to your WhatsApp group as admin:</p>
+                                    <p className="text-xs text-muted-foreground">{t('wa_step1')}</p>
                                     <div className="flex items-center gap-2">
                                         <code className="flex-1 text-sm font-mono text-foreground bg-muted px-3 py-1.5 rounded border">{number}</code>
                                         <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
@@ -199,7 +200,7 @@ function StepInstruction({
                             </div>
                             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
                                 <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">2</span>
-                                <p className="text-xs text-muted-foreground">Grant <span className="font-semibold text-foreground">admin privileges</span> to the number after adding it.</p>
+                                <p className="text-xs text-muted-foreground">{t('wa_step2_prefix')}<span className="font-semibold text-foreground">{t('wa_step2_bold')}</span>{t('wa_step2_suffix')}</p>
                             </div>
                         </div>
                     ) : (
@@ -210,17 +211,17 @@ function StepInstruction({
                                         <div className="flex items-center gap-2">
                                             <Button variant="outline" size="sm" asChild className="gap-1.5 h-7 text-xs">
                                                 <a href={botLink.startsWith("http") ? botLink : `https://${botLink}`} target="_blank" rel="noopener noreferrer">
-                                                    <ExternalLink className="h-3 w-3" /> Open bot
+                                                    <ExternalLink className="h-3 w-3" /> {t('tg_open_bot')}
                                                 </a>
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(botLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
                                                 {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                                             </Button>
                                         </div>
-                                    ) : <p className="text-xs text-amber-600 dark:text-amber-400">Bot link not configured yet.</p>, label: "Click the bot link to open it in Telegram"
+                                    ) : <p className="text-xs text-amber-600 dark:text-amber-400">{t('tg_bot_not_configured')}</p>, label: t('tg_step1')
                                 },
-                                { step: "2", label: "Add the bot to your group using \"Add to Group\"" },
-                                { step: "3", label: "Make the bot an admin for full access" },
+                                { step: "2", label: t('tg_step2') },
+                                { step: "3", label: t('tg_step3') },
                             ].map((item, idx) => (
                                 <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border">
                                     <span className="text-xs font-mono font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 shrink-0">{item.step}</span>
@@ -237,18 +238,18 @@ function StepInstruction({
 
             <div className="flex items-center justify-between">
                 <Button variant="ghost" onClick={onBack} className="gap-2">
-                    <ArrowLeft className="h-4 w-4" /> Back
+                    <ArrowLeft className="h-4 w-4" /> {t('back')}
                 </Button>
                 <Button onClick={onNext} disabled={!groupName.trim()} className="gap-2">
-                    Continue <ArrowRight className="h-4 w-4" />
+                    {t('continue')} <ArrowRight className="h-4 w-4" />
                 </Button>
             </div>
         </motion.div>
     );
 }
 
-function StepListening({ groupId, externalId, onConnected, onBack }: {
-    groupId: string | null; externalId: string | null; onConnected: () => void; onBack: () => void;
+function StepListening({ groupId, externalId, onConnected, onBack, t }: {
+    groupId: string | null; externalId: string | null; onConnected: () => void; onBack: () => void; t: (key: string) => string;
 }) {
     const [seconds, setSeconds] = useState(0);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -277,17 +278,17 @@ function StepListening({ groupId, externalId, onConnected, onBack }: {
             <div className="space-y-2">
                 <Badge variant="secondary" className="gap-1.5">
                     <Radio className="h-3 w-3 animate-pulse text-amber-500" />
-                    Listening...
+                    {t('listening')}
                 </Badge>
-                <h1 className="text-2xl font-semibold text-foreground">Verification</h1>
+                <h1 className="text-2xl font-semibold text-foreground">{t('verification')}</h1>
                 <p className="text-sm text-muted-foreground">
-                    Send this code in your group to verify the connection.
+                    {t('verification_desc')}
                 </p>
             </div>
 
             <PremiumCard className="p-6 space-y-5">
                 <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Verification code</p>
+                    <p className="text-xs text-muted-foreground">{t('verification_code')}</p>
                     <div className="flex items-center gap-2">
                         <code className="flex-1 text-2xl font-mono font-semibold text-foreground text-center bg-muted rounded-lg py-3">
                             {externalId || "—"}
@@ -310,29 +311,29 @@ function StepListening({ groupId, externalId, onConnected, onBack }: {
                         />
                     </div>
                     <p className="text-xs text-muted-foreground font-mono">
-                        {formatTime(seconds)} elapsed
+                        {formatTime(seconds)} {t('elapsed')}
                     </p>
                 </div>
             </PremiumCard>
 
             <Button variant="ghost" onClick={onBack} className="gap-2 mx-auto">
-                <ArrowLeft className="h-4 w-4" /> Back
+                <ArrowLeft className="h-4 w-4" /> {t('back')}
             </Button>
         </motion.div>
     );
 }
 
-function StepWelcome() {
+function StepWelcome({ t }: { t: (key: string) => string }) {
     const router = useRouter();
     return (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-sm mx-auto text-center">
             <div className="space-y-2">
                 <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Connected
+                    {t('connected_badge')}
                 </motion.div>
-                <h1 className="text-2xl font-semibold text-foreground">You're all set!</h1>
-                <p className="text-sm text-muted-foreground">Your community is now connected and being monitored by IgnoHub AI.</p>
+                <h1 className="text-2xl font-semibold text-foreground">{t('all_set')}</h1>
+                <p className="text-sm text-muted-foreground">{t('all_set_desc')}</p>
             </div>
 
             <PremiumCard className="p-6">
@@ -342,9 +343,9 @@ function StepWelcome() {
                     </motion.div>
                     <div className="space-y-2 w-full">
                         {[
-                            { icon: Zap, label: "Automated AI summaries", color: "text-primary" },
-                            { icon: Zap, label: "Real-time alert detection", color: "text-destructive" },
-                            { icon: Zap, label: "Behavioral insights engine", color: "text-sky-500" },
+                            { icon: Zap, label: t('feature_summaries'), color: "text-primary" },
+                            { icon: Zap, label: t('feature_alerts'), color: "text-destructive" },
+                            { icon: Zap, label: t('feature_insights'), color: "text-sky-500" },
                         ].map(({ icon: Icon, label, color }) => (
                             <div key={label} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
                                 <Icon className={`h-4 w-4 ${color} shrink-0`} />
@@ -356,7 +357,7 @@ function StepWelcome() {
             </PremiumCard>
 
             <Button onClick={() => router.push("/dashboard")} className="w-full gap-2">
-                Go to dashboard <ArrowRight className="h-4 w-4" />
+                {t('go_dashboard')} <ArrowRight className="h-4 w-4" />
             </Button>
         </motion.div>
     );
@@ -364,6 +365,7 @@ function StepWelcome() {
 
 export default function OnboardingPage() {
     const { organization, loading: orgLoading } = useOrganization();
+    const t = useTranslations("onboarding");
     const [step, setStep] = useState(0);
     const [platform, setPlatform] = useState<Platform>(null);
     const [groupName, setGroupName] = useState("");
@@ -401,21 +403,21 @@ export default function OnboardingPage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">
-            <ProgressBar step={step} />
+            <ProgressBar step={step} t={t} />
             <AnimatePresence mode="wait">
-                {step === 0 && <StepPlatform key="platform" onSelect={handlePlatformSelect} />}
+                {step === 0 && <StepPlatform key="platform" onSelect={handlePlatformSelect} t={t} />}
                 {step === 1 && data && (
-                    <StepInstruction key="instruction" platform={platform} data={data} groupName={groupName} setGroupName={setGroupName} groupDescription={groupDescription} setGroupDescription={setGroupDescription} onNext={handleStartListening} onBack={() => setStep(0)} error={error} />
+                    <StepInstruction key="instruction" platform={platform} data={data} groupName={groupName} setGroupName={setGroupName} groupDescription={groupDescription} setGroupDescription={setGroupDescription} onNext={handleStartListening} onBack={() => setStep(0)} error={error} t={t} />
                 )}
-                {step === 2 && <StepListening key="listening" groupId={groupId} externalId={externalId} onConnected={() => setStep(3)} onBack={() => setStep(1)} />}
-                {step === 3 && <StepWelcome key="welcome" />}
+                {step === 2 && <StepListening key="listening" groupId={groupId} externalId={externalId} onConnected={() => setStep(3)} onBack={() => setStep(1)} t={t} />}
+                {step === 3 && <StepWelcome key="welcome" t={t} />}
             </AnimatePresence>
 
             {registering && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
                     <PremiumCard className="p-8 text-center space-y-3 max-w-xs">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                        <p className="text-sm text-muted-foreground">Registering your community...</p>
+                        <p className="text-sm text-muted-foreground">{t('registering')}</p>
                     </PremiumCard>
                 </div>
             )}

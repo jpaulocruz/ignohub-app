@@ -7,7 +7,7 @@ export interface WabaPayload {
     template?: {
         name: string;
         language: { code: string };
-        components: any[];
+        components: Record<string, unknown>[];
     };
 }
 

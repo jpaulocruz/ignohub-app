@@ -29,8 +29,9 @@ export async function sendEmail({
       htmlContent
     })
     return response.data
-  } catch (error: any) {
-    console.error('[Brevo] Error sending email:', error.response?.data || error.message)
+  } catch (error: unknown) {
+    const err = error as { response?: { data: unknown }; message: string };
+    console.error('[Brevo] Error sending email:', err.response?.data || err.message)
     throw error
   }
 }

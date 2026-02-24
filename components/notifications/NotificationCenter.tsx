@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { Bell, Check, Info, AlertTriangle, AlertCircle, CheckCircle2, ExternalLink, MessageSquare, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getNotifications, markAsRead, markAllAsRead } from "@/app/actions/notifications";
@@ -9,23 +9,42 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
+
+interface Notification {
+    id: string;
+    title: string;
+    message: string;
+    type: string;
+    is_read: boolean;
+    created_at: string;
+    metadata?: {
+        platform?: string;
+        link?: string;
+        alert_id?: string;
+        summary_id?: string;
+        insight_id?: string;
+        id?: string;
+    };
+}
 
 export function NotificationCenter() {
     const [isOpen, setIsOpen] = useState(false);
-    const [notifications, setNotifications] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const popoverRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
+    const t = useTranslations("notifications");
 
-    const fetchItems = async () => {
+    const fetchItems = useCallback(async () => {
         try {
-            const data = await getNotifications();
+            const data = await getNotifications() as Notification[];
             setNotifications(data);
-            setUnreadCount(data.filter((n: any) => !n.is_read).length);
+            setUnreadCount(data.filter((n) => !n.is_read).length);
         } catch (e) {
             console.error(e);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchItems();
@@ -34,7 +53,7 @@ export function NotificationCenter() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchItems())
             .subscribe();
         return () => { supabase.removeChannel(channel); };
-    }, []);
+    }, [fetchItems, supabase]);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -108,9 +127,9 @@ export function NotificationCenter() {
                         {/* Header */}
                         <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-popover">
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+                                <h3 className="text-sm font-semibold text-foreground">{t('title')}</h3>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                                    {unreadCount > 0 ? `${unreadCount} ${t('unread', { count: unreadCount })}` : t('all_caught_up')}
                                 </p>
                             </div>
                             {unreadCount > 0 && (
@@ -120,7 +139,7 @@ export function NotificationCenter() {
                                     onClick={handleMarkAllAsRead}
                                     className="text-xs h-7 px-2 text-primary hover:text-primary"
                                 >
-                                    Mark all read
+                                    {t('mark_all_read')}
                                 </Button>
                             )}
                         </div>
@@ -132,8 +151,8 @@ export function NotificationCenter() {
                                     <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center mx-auto mb-3">
                                         <Bell className="h-5 w-5 text-muted-foreground" />
                                     </div>
-                                    <p className="text-sm font-medium text-foreground">All clear</p>
-                                    <p className="text-xs text-muted-foreground mt-1">No new notifications.</p>
+                                    <p className="text-sm font-medium text-foreground">{t('all_clear')}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{t('no_notifications')}</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-border">
@@ -180,7 +199,7 @@ export function NotificationCenter() {
                                                                     href={link}
                                                                     className="text-[11px] text-primary flex items-center gap-1 hover:underline"
                                                                 >
-                                                                    View <ExternalLink className="h-2.5 w-2.5" />
+                                                                    {t('view')} <ExternalLink className="h-2.5 w-2.5" />
                                                                 </a>
                                                             )}
                                                         </div>
@@ -190,7 +209,7 @@ export function NotificationCenter() {
                                                     <button
                                                         onClick={() => handleMarkAsRead(notif.id)}
                                                         className="absolute right-3 top-3 w-6 h-6 flex items-center justify-center rounded-md hover:bg-accent opacity-0 group-hover:opacity-100 transition-all cursor-pointer z-20"
-                                                        title="Mark as read"
+                                                        title={t('mark_read')}
                                                     >
                                                         <Check className="h-3 w-3 text-muted-foreground" />
                                                     </button>

@@ -2,10 +2,10 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { Database } from '@/types/database.types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.ac',
+    // @ts-expect-error - version string accepted by SDK but not yet in types
+    apiVersion: '2025-01-27.ac' as any, // eslint-disable-line @typescript-eslint/no-explicit-any
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -18,9 +18,9 @@ export async function POST(req: Request) {
 
     try {
         event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
-    } catch (err: any) {
-        console.error(`[Stripe Webhook] Error verifying signature: ${err.message}`)
-        return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+    } catch (err: unknown) {
+        console.error(`Error signature: ${err instanceof Error ? err.message : String(err)}`)
+        return new Response(`Webhook Error: ${err instanceof Error ? err.message : String(err)}`, { status: 400 })
     }
 
     const supabase = createAdminClient()
@@ -71,8 +71,9 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ received: true })
-    } catch (err: any) {
-        console.error(`[Stripe Webhook] Error processing event: ${err.message}`)
-        return NextResponse.json({ error: `Webhook Handler Error: ${err.message}` }, { status: 500 })
+    } catch (err: unknown) {
+        const error = err as Error
+        console.error(`[Stripe Webhook] Error processing event: ${error.message}`)
+        return NextResponse.json({ error: `Webhook Handler Error: ${error.message}` }, { status: 500 })
     }
 }
