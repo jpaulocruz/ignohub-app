@@ -18,8 +18,19 @@ export function createClient() {
         // Return a dummy client proxy to prevent @supabase/ssr from throwing its own required field error
         // This will still fail on actual calls, but won't crash the entire JS bundle boot.
         return {
-            auth: { onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }) },
-            from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }) })
+            auth: {
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+                getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+                getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+            },
+            from: () => ({
+                select: () => ({
+                    eq: () => ({
+                        maybeSingle: () => Promise.resolve({ data: null, error: null }),
+                        single: () => Promise.resolve({ data: null, error: null }),
+                    })
+                })
+            })
         } as any
     }
 
