@@ -148,7 +148,8 @@
         "behavioral_insight": "Insight comportamental",
         "source_identifier": "Identificador de origem",
         "archiving": "Arquivando...",
-        "resolving": "Resolvendo..."
+        "resolving": "Resolvendo...",
+        "search": "Buscar..."
     },
     "groups": {
         "title": "Comunidades",

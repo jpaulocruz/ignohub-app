@@ -148,7 +148,8 @@
         "behavioral_insight": "Behavioral insight",
         "source_identifier": "Source identifier",
         "archiving": "Archiving...",
-        "resolving": "Resolving..."
+        "resolving": "Resolving...",
+        "search": "Search..."
     },
     "groups": {
         "title": "Communities",
