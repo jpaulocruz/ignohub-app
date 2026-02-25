@@ -257,8 +257,12 @@ function StepListening({ groupId, externalId, onConnected, onBack, t }: {
 
     const poll = useCallback(async () => {
         if (!groupId) return;
-        const result = await checkGroupSignal(groupId);
-        if (result.connected) onConnected();
+        try {
+            const result = await checkGroupSignal(groupId);
+            if (result.connected) onConnected();
+        } catch (e) {
+            console.error("Polling error:", e);
+        }
     }, [groupId, onConnected]);
 
     useEffect(() => {
@@ -378,7 +382,18 @@ export default function OnboardingPage() {
     const [externalId, setExternalId] = useState<string | null>(null);
 
     useEffect(() => {
-        getOnboardingData().then(d => { setData(d); setLoading(false); });
+        const fetchData = async () => {
+            try {
+                const d = await getOnboardingData();
+                setData(d);
+            } catch (e: any) {
+                console.error("Onboarding data fetch error:", e);
+                setError(e.message || "Failed to load onboarding data.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
     }, []);
 
     const handlePlatformSelect = (p: Platform) => { setPlatform(p); setStep(1); };

@@ -201,6 +201,7 @@ export default function AdminAssetsPage() {
 
     const evolutionInstances = instances.filter((i) => i.provider === "evolution");
     const telegramInstances = instances.filter((i) => i.provider === "telegram");
+    const telegramGroupCount = telegramInstances.reduce((acc, inst) => acc + (inst.groups_count || 0), 0);
 
     return (
         <div className="space-y-6 pb-12">
@@ -357,6 +358,12 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         setError(null);
         try {
             const result = await createEvolutionInstance(newName.trim());
+
+            if (result.error) {
+                setError(result.error);
+                return;
+            }
+
             setNewName("");
             setShowNewForm(false);
             onRefresh();
@@ -377,6 +384,10 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         setError(null);
         try {
             const result = await connectEvolutionInstance(inst.instance_name, inst.id);
+            if (result.error) {
+                setError(result.error);
+                return;
+            }
             if (result.qr) {
                 setQrModal({ open: true, qr: result.qr, name: inst.instance_name, dbId: inst.id, state: "qr_ready" });
                 startPolling(inst.instance_name, inst.id);
@@ -419,7 +430,11 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         setError(null);
         try {
             const result = await syncEvolutionInstances();
-            onRefresh();
+            if (result.error) {
+                setError(result.error);
+            } else {
+                onRefresh();
+            }
         } catch (e: any) {
             setError(e.message || t("connection_failed"));
         } finally {
@@ -430,16 +445,24 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
     const handleDelete = async (inst: any) => {
         if (!confirm(`Remover instância "${inst.instance_name}"? Isso a desconecta da Evolution API também.`)) return;
         try {
-            await deleteEvolutionInstance(inst.id, inst.instance_name);
-            onRefresh();
+            const result = await deleteEvolutionInstance(inst.id, inst.instance_name);
+            if (result.error) {
+                setError(result.error);
+            } else {
+                onRefresh();
+            }
         } catch (e: any) {
             setError(e.message || t("connection_failed"));
         }
     };
 
     const handleToggle = async (id: string, active: boolean) => {
-        await toggleCollectionStatus(id, active);
-        onRefresh();
+        const result = await toggleCollectionStatus(id, active);
+        if (result.error) {
+            setError(result.error);
+        } else {
+            onRefresh();
+        }
     };
 
     const [configStatus, setConfigStatus] = useState<"loading" | "missing" | "configured">("loading");
@@ -491,11 +514,15 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         try {
             // Remove trailing slash from URL
             const cleanUrl = configForm.url.trim().replace(/\/$/, "");
-            await saveEvolutionConfig(cleanUrl, configForm.apiKey.trim());
+            const result = await saveEvolutionConfig(cleanUrl, configForm.apiKey.trim());
 
-            await checkConfig();
-            setEditingConfig(false);
-            onRefresh(); // Refresh instances with new config
+            if (result.error) {
+                setError(result.error);
+            } else {
+                await checkConfig();
+                setEditingConfig(false);
+                onRefresh(); // Refresh instances with new config
+            }
         } catch (e: any) {
             setError(e.message || t("connection_failed"));
         } finally {
@@ -954,26 +981,53 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
     const [showToken, setShowToken] = useState(false);
     const [saving, setSaving] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSave = async () => {
         setSaving(true);
+        setError(null);
         try {
-            await saveWhatsAppConfig({ id: config?.id, ...form });
-            onRefresh();
-        } catch (e) { console.error(e); }
+            const res = await saveWhatsAppConfig({ id: config?.id, ...form });
+            if (res.error) {
+                setError(res.error);
+            } else {
+                onRefresh();
+            }
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Erro ao salvar configuração.");
+        }
         finally { setSaving(false); }
     };
 
     const handleDelete = async () => {
         if (!config?.id || !confirm(t("connection_failed"))) return;
-        await deleteWhatsAppConfig(config.id);
-        onRefresh();
+        setError(null);
+        try {
+            const res = await deleteWhatsAppConfig(config.id);
+            if (res.error) {
+                setError(res.error);
+            } else {
+                onRefresh();
+            }
+        } catch (e: any) {
+            setError(e.message || "Erro ao excluir configuração.");
+        }
     };
 
     const handleToggle = async () => {
         if (!config?.id) return;
-        await toggleWhatsAppStatus(config.id, config.is_active);
-        onRefresh();
+        setError(null);
+        try {
+            const res = await toggleWhatsAppStatus(config.id, config.is_active);
+            if (res.error) {
+                setError(res.error);
+            } else {
+                onRefresh();
+            }
+        } catch (e: any) {
+            setError(e.message || "Erro ao alterar status.");
+        }
     };
 
     const copyVerifyToken = () => {
@@ -991,10 +1045,10 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
                     </div>
                     <div>
                         <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
-                            {isNew ? t("new_meta_protocol") : (config.display_number || config.phone_number_id)}
+                            {isNew ? t("new_meta_protocol") : (config?.display_number || config?.phone_number_id)}
                         </h3>
                         <div className="flex items-center gap-3 mt-2">
-                            {!isNew && <StatusBadge active={config.is_active} />}
+                            {!isNew && <StatusBadge active={config?.is_active || false} t={t} />}
                             {!isNew && (
                                 <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 rounded-none border border-white/5">
                                     {groupCount === 1 ? t("unit_syncs", { count: groupCount }) : t("unit_syncs", { count: groupCount })}
@@ -1008,8 +1062,10 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
                         <button
                             onClick={async () => {
                                 if (!config?.id) return;
-                                await setSystemBot(config.id, "admin_outbound_meta");
-                                onRefresh();
+                                setError(null);
+                                const result = await setSystemBot(config.id, "admin_outbound_meta");
+                                if (result?.error) setError(result.error);
+                                else onRefresh();
                             }}
                             className={cn(
                                 "p-3 rounded-sm border transition-all cursor-pointer",
@@ -1031,6 +1087,19 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
                     </div>
                 )}
             </div>
+
+            {/* Error Banner */}
+            {error && (
+                <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-lg cursor-pointer">
+                        <X className="h-4 w-4 text-red-400" />
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <InputField label="Phone Number ID" value={form.phone_number_id} onChange={(v) => setForm({ ...form, phone_number_id: v })} placeholder="123456789" />
@@ -1091,18 +1160,26 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
     const [newBotName, setNewBotName] = useState("");
     const [newBotKey, setNewBotKey] = useState("");
     const [saving, setSaving] = useState(false);
-    const telegramGroupCount = loadStats.platformCounts?.telegram || 0;
+    const [error, setError] = useState<string | null>(null);
 
     const handleCreateBot = async () => {
         if (!newBotName.trim()) return;
         setSaving(true);
+        setError(null);
         try {
-            await saveCollectionInstance({ provider: "telegram", instance_name: newBotName, instance_key: newBotKey || undefined });
-            setNewBotName("");
-            setNewBotKey("");
-            setShowNewBot(false);
-            onRefresh();
-        } catch (e) { console.error(e); }
+            const result = await saveCollectionInstance({ provider: "telegram", instance_name: newBotName, instance_key: newBotKey || undefined });
+            if (result.error) {
+                setError(result.error);
+            } else {
+                setNewBotName("");
+                setNewBotKey("");
+                setShowNewBot(false);
+                onRefresh();
+            }
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Erro ao criar bot.");
+        }
         finally { setSaving(false); }
     };
 
@@ -1125,7 +1202,7 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
                             <div className="min-w-0">
                                 <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none truncate">{inst.instance_name}</p>
                                 <div className="flex items-center gap-3 mt-2.5">
-                                    <StatusBadge active={inst.is_active} />
+                                    <StatusBadge active={inst.is_active || false} t={t} />
                                     <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 border border-white/5">
                                         {inst.groups_count === 1 ? t("unit_syncs", { count: inst.groups_count }) : t("unit_syncs", { count: inst.groups_count })}
                                     </span>
@@ -1137,7 +1214,11 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
                         </div>
                         <div className="flex items-center gap-2.5 shrink-0">
                             <button
-                                onClick={async () => { await toggleCollectionStatus(inst.id, inst.is_active); onRefresh(); }}
+                                onClick={async () => {
+                                    const result = await toggleCollectionStatus(inst.id, inst.is_active || false);
+                                    if (result.error) alert(result.error);
+                                    else onRefresh();
+                                }}
                                 className={cn(
                                     "p-3 rounded-none border transition-all cursor-pointer",
                                     inst.is_active ? "bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20" : "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/20"
@@ -1147,7 +1228,13 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
                                 <Power className="h-4 w-4" />
                             </button>
                             <button
-                                onClick={async () => { if (confirm("Purge Unit Identity?")) { await deleteCollectionInstance(inst.id); onRefresh(); } }}
+                                onClick={async () => {
+                                    if (confirm("Purge Unit Identity?")) {
+                                        const result = await deleteCollectionInstance(inst.id);
+                                        if (result.error) alert(result.error);
+                                        else onRefresh();
+                                    }
+                                }}
                                 className="p-3 rounded-none bg-red-500/5 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer"
                                 title="Purge"
                             >
@@ -1167,33 +1254,47 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
             </div>
 
             {/* New Telegram Bot */}
-            {showNewBot ? (
-                <PremiumCard className="p-8 border-2 border-dashed border-blue-500/30 bg-blue-500/5 rounded-none">
-                    <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tighter">
-                        <Plus className="h-6 w-6 text-blue-500" /> {t("new_telegram_bot_title")}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField label={t("bot_unit_identity")} value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
-                        <InputField label={t("cryptographic_bot_token")} value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
-                    </div>
-                    <div className="flex items-center gap-4 mt-8">
-                        <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer">
-                            {saving ? t("syncing") : t("initialize_bot_unit")}
-                        </button>
-                        <button onClick={() => setShowNewBot(false)} className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
-                            {t("abort")}
-                        </button>
-                    </div>
-                </PremiumCard>
-            ) : (
-                <button onClick={() => setShowNewBot(true)} className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-blue-500/30 transition-all group cursor-pointer bg-navy-950/20">
-                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-blue-500 transition-colors">
-                        <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
-                    </div>
-                </button>
-            )}
-        </div>
+            {
+                showNewBot ? (
+                    <PremiumCard className="p-8 border-2 border-dashed border-blue-500/30 bg-blue-500/5 rounded-none">
+                        <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tighter">
+                            <Plus className="h-6 w-6 text-blue-500" /> {t("new_telegram_bot_title")}
+                        </h3>
+
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                                    <p className="text-sm text-red-400">{error}</p>
+                                </div>
+                                <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
+                                    <X className="h-4 w-4 text-red-400" />
+                                </button>
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <InputField label={t("bot_unit_identity")} value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
+                            <InputField label={t("cryptographic_bot_token")} value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
+                        </div>
+                        <div className="flex items-center gap-4 mt-8">
+                            <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer">
+                                {saving ? t("syncing") : t("initialize_bot_unit")}
+                            </button>
+                            <button onClick={() => setShowNewBot(false)} className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
+                                {t("abort")}
+                            </button>
+                        </div>
+                    </PremiumCard>
+                ) : (
+                    <button onClick={() => setShowNewBot(true)} className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-blue-500/30 transition-all group cursor-pointer bg-navy-950/20">
+                        <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-blue-500 transition-colors">
+                            <Plus className="h-6 w-6" />
+                            <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
+                        </div>
+                    </button>
+                )
+            }
+        </div >
     );
 }
 
@@ -1204,19 +1305,25 @@ function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: 
         telegram_bot_username: preset.telegram_bot_username || "",
         whatsapp_support_number: preset.whatsapp_support_number || "",
     });
-    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSave = async () => {
         setSaving(true);
+        setError(null);
         try {
-            await saveAgentPreset({
+            const result = await saveAgentPreset({
                 id: preset.id,
                 ...form
             });
-            setEditing(false);
-            onRefresh();
-        } catch (e) {
+            if (result.error) {
+                setError(result.error);
+            } else {
+                setEditing(false);
+                onRefresh();
+            }
+        } catch (e: any) {
             console.error(e);
+            setError(e.message || "Erro ao atualizar preset.");
         } finally {
             setSaving(false);
         }
@@ -1232,6 +1339,18 @@ function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: 
                             <X className="h-4 w-4" />
                         </button>
                     </div>
+
+                    {error && (
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                                <p className="text-sm text-red-400 font-black uppercase tracking-widest text-[10px]">{error}</p>
+                            </div>
+                            <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
+                                <X className="h-4 w-4 text-red-400" />
+                            </button>
+                        </div>
+                    )}
 
                     <InputField
                         label={t("unified_bot_link")}
@@ -1466,17 +1585,25 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description, t }: {
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleSave = async () => {
         if (!value.trim()) return;
         setSaving(true);
+        setError(null);
         try {
-            await saveAISetting(configKey, value.trim());
-            setValue("");
-            setSuccess(true);
-            onSave();
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (e) {
+            const result = await saveAISetting(configKey, value.trim());
+            if (result.error) {
+                setError(result.error);
+            } else {
+                setValue("");
+                setSuccess(true);
+                onSave();
+                setTimeout(() => setSuccess(false), 3000);
+            }
+        } catch (e: any) {
             console.error(e);
+            setError(e.message || "Erro ao salvar chave.");
         } finally {
             setSaving(false);
         }
@@ -1496,6 +1623,15 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description, t }: {
                     {currentValue ? t("status_open").toUpperCase() : t("status_qr_ready").toUpperCase()}
                 </div>
             </div>
+
+            {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
+                    <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">{error}</p>
+                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
+                        <X className="h-4 w-4 text-red-400" />
+                    </button>
+                </div>
+            )}
 
             <div className="space-y-3">
                 <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-secondary-gray-600 px-1">
@@ -1558,10 +1694,12 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh, t }: { temp
     const handleUpdateMapping = async (key: string, value: string) => {
         setMappingSaving(true);
         try {
-            await saveAISetting(key, value);
-            onRefresh();
-        } catch (e) {
+            const result = await saveAISetting(key, value);
+            if (result.error) alert(result.error);
+            else onRefresh();
+        } catch (e: any) {
             console.error(e);
+            alert(e.message || "Erro ao atualizar mapeamento.");
         } finally {
             setMappingSaving(false);
         }
@@ -1659,25 +1797,43 @@ function TemplateCard({ config, isNew, onRefresh, onCancel, t }: { config: Whats
         platform: config?.platform || "meta",
         category: config?.category || "MARKETING",
         language: config?.language || "pt_BR",
-        content: config?.content || "",
+        content: typeof config?.content === 'string' ? config.content : JSON.stringify(config?.content || "", null, 2),
         is_active: config?.is_active ?? true,
     });
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSave = async () => {
         if (!form.name.trim()) return;
         setSaving(true);
+        setError(null);
         try {
-            await saveWhatsAppTemplate({ id: config?.id, ...form });
-            onRefresh();
-        } catch (e) { console.error(e); }
+            const result = await saveWhatsAppTemplate({ id: config?.id, ...(form as any) });
+            if (result.error) {
+                setError(result.error);
+            } else {
+                onRefresh();
+            }
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || "Erro ao salvar template.");
+        }
         finally { setSaving(false); }
     };
 
     const handleDelete = async () => {
         if (!config?.id || !confirm(t("connection_failed"))) return;
-        await deleteWhatsAppTemplate(config.id);
-        onRefresh();
+        setError(null);
+        try {
+            const result = await deleteWhatsAppTemplate(config.id);
+            if (result.error) {
+                setError(result.error);
+            } else {
+                onRefresh();
+            }
+        } catch (e: any) {
+            setError(e.message || "Erro ao excluir template.");
+        }
     };
 
     return (
@@ -1805,16 +1961,23 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
 
     const activeDef = PROMPT_DEFINITIONS.find(p => p.id === selectedPromptId) || PROMPT_DEFINITIONS[0];
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleSave = async () => {
         console.log(`[PromptsTab] Saving ${selectedPromptId}:`, localValue.length);
         setSaving(true);
+        setError(null);
         try {
             const result = await saveAISetting(selectedPromptId, localValue, t(activeDef.descKey));
             console.log("[PromptsTab] Save result:", result);
-            onRefresh();
-            alert(`${t(activeDef.labelKey)} ${t("conected_success")}`);
+            if (result.error) {
+                setError(result.error);
+            } else {
+                onRefresh();
+                alert(`${t(activeDef.labelKey)} ${t("conected_success")}`);
+            }
         } catch (e: any) {
-            alert(t("connection_failed") + ": " + e.message);
+            setError(e.message || t("connection_failed"));
         } finally {
             setSaving(false);
         }
@@ -1899,6 +2062,20 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
                         </div>
                     </div>
 
+
+
+                    {error && (
+                        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                                <p className="text-sm text-red-400 font-black uppercase tracking-widest">{error}</p>
+                            </div>
+                            <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
+                                <X className="h-4 w-4 text-red-400" />
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mt-8 flex items-center gap-4 p-6 bg-navy-950/40 border border-white/5 rounded-none">
                         <div className="h-10 w-10 rounded-none bg-brand-500/5 flex items-center justify-center shrink-0 border border-brand-500/10">
                             <Info className="h-5 w-5 text-brand-500" />
@@ -1908,8 +2085,8 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
                         </p>
                     </div>
                 </PremiumCard>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

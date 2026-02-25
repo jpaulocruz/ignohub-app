@@ -4,79 +4,35 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function getOnboardingData() {
-    const supabase = await createClient();
+    try {
+        const supabase = await createClient();
 
-    // 1. WhatsApp: Prioritize Official Meta outbound, fallback to Evolution
-    const { data: metaConfig } = await supabase
-        .from("admin_outbound_meta")
-        .select("display_number")
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-    let whatsappNumber = metaConfig?.display_number;
-    let whatsappId = metaConfig?.id;
-
-    if (!whatsappNumber) {
-        const { data: evolutionInstance } = await supabase
-            .from("admin_collection_instances")
-            .select("id, instance_name")
+        // 1. Get WhatsApp Config
+        const { data: whatsappConfig } = await supabase
+            .from("admin_outbound_meta")
+            .select("id, display_number, phone_number_id")
             .eq("is_active", true)
-            .eq("provider", "evolution")
-            .limit(1)
+            .eq("is_system_bot", true)
             .maybeSingle();
 
-        whatsappNumber = evolutionInstance?.instance_name;
-        whatsappId = evolutionInstance?.id;
-    }
-
-    // 2. Telegram: get bot link from multiple sources
-    // 1. system_settings global link
-    const { data: globalLink } = await supabase
-        .from("system_settings")
-        .select("value")
-        .eq("key", "TELEGRAM_BOT_LINK")
-        .maybeSingle();
-
-    let botLink = globalLink?.value;
-
-    // 2. Telegram instance name (used as bot username)
-    if (!botLink) {
-        const { data: telegramInstance } = await supabase
-            .from("admin_collection_instances")
-            .select("instance_name")
-            .eq("is_active", true)
-            .eq("provider", "telegram")
-            .limit(1)
-            .maybeSingle();
-        if (telegramInstance?.instance_name) {
-            const username = telegramInstance.instance_name.startsWith('@')
-                ? telegramInstance.instance_name.slice(1)
-                : telegramInstance.instance_name;
-            botLink = `https://t.me/${username}`;
-        }
-    }
-
-    // 3. Agent preset bot_link
-    if (!botLink) {
-        const { data: preset } = await supabase
+        // 2. Get Telegram Bot Link
+        const { data: botConfig } = await supabase
             .from("agent_presets")
             .select("bot_link")
-            .eq("is_active", true)
-            .not("bot_link", "is", null)
-            .limit(1)
+            .eq("name", "Sentinel")
             .maybeSingle();
-        botLink = preset?.bot_link;
-    }
 
-    return {
-        whatsappConfig: whatsappNumber ? {
-            id: whatsappId || 'default',
-            display_number: whatsappNumber,
-            phone_number_id: whatsappNumber
-        } : null,
-        botLink: botLink || null
-    };
+        return {
+            whatsappConfig,
+            botLink: botConfig?.bot_link || null
+        };
+    } catch (err: any) {
+        console.error('[getOnboardingData] Error:', err);
+        return {
+            whatsappConfig: null,
+            botLink: null
+        };
+    }
 }
 
 export async function registerGroup(data: {
@@ -85,23 +41,21 @@ export async function registerGroup(data: {
     platform: string;
     organizationId: string;
 }) {
-    const supabase = await createClient();
-
-    const externalId = `onb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    // Check for duplicate name in the same organization
-    const { data: existingGroup } = await supabase
-        .from("groups")
-        .select("id")
-        .eq("organization_id", data.organizationId)
-        .ilike("name", data.name)
-        .maybeSingle();
-
-    if (existingGroup) {
-        return { error: "Já existe um grupo cadastrado com este nome. Por favor, escolha outro nome ou exclua o existente." };
-    }
-
     try {
+        const supabase = await createClient(); // Assuming createClient() is intended here, as createAdminClient() is not defined in the original file.
+
+        // Check for duplicate name in the same organization
+        const { data: existingGroup } = await supabase
+            .from("groups")
+            .select("id")
+            .eq("organization_id", data.organizationId)
+            .ilike("name", data.name)
+            .maybeSingle();
+
+        if (existingGroup) {
+            return { error: "Já existe um grupo cadastrado com este nome. Por favor, escolha outro nome ou exclua o existente." };
+        }
+
         // 1. Get default preset (Sentinel) or first available
         const { data: preset } = await supabase
             .from('agent_presets')
@@ -110,6 +64,7 @@ export async function registerGroup(data: {
             .single()
 
         // 2. Create Group
+        const externalId = `onb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert({
@@ -148,29 +103,28 @@ export async function registerGroup(data: {
         console.error("[registerGroup] Unexpected Error:", err);
         return { error: "Ocorreu um erro inesperado ao processar sua solicitação." };
     }
-
-    return { groupId: group.id, externalId: group.external_id };
 }
 
 export async function checkGroupSignal(groupId: string) {
-    const supabase = await createClient();
+    try {
+        const supabase = await createClient();
 
-    const { data: message } = await supabase
-        .from("messages")
-        .select("id")
-        .eq("group_id", groupId)
-        .limit(1)
-        .maybeSingle();
-
-    if (message) {
-        await supabase
+        const { data: agent, error } = await supabase
             .from("group_agents")
-            .update({ status: "active", last_seen_at: new Date().toISOString() })
-            .eq("group_id", groupId);
+            .select("status")
+            .eq("group_id", groupId)
+            .single();
 
-        revalidatePath("/groups");
-        return { connected: true };
+        if (error || !agent) {
+            return { connected: false };
+        }
+
+        // If status moved from pending to active, it means the bot captured a message
+        return {
+            connected: agent.status === "active",
+        };
+    } catch (err: any) {
+        console.error('[checkGroupSignal] Error:', err);
+        return { connected: false };
     }
-
-    return { connected: false };
 }

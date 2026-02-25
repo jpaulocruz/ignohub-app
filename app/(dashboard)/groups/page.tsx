@@ -46,6 +46,8 @@ export default function GroupsPage() {
     const [verificationCode, setVerificationCode] = useState<string | null>(null);
     const [loadingCode, setLoadingCode] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
     const supabase = createClient();
 
     const fetchGroups = async () => {
@@ -57,7 +59,12 @@ export default function GroupsPage() {
             .eq("organization_id", organization.id)
             .order("created_at", { ascending: false });
 
-        if (error || !groupsData) { setLoading(false); return; }
+        if (error || !groupsData) {
+            console.error("Groups fetch error:", error);
+            setError("Failed to fetch groups. Please try again.");
+            setLoading(false);
+            return;
+        }
 
         const presetIds = groupsData.map(g => g.preset_id).filter(Boolean);
         const groupIds = groupsData.map(g => g.id);
@@ -108,19 +115,34 @@ export default function GroupsPage() {
             ? "This group is active and being monitored.\n\nDeleting will immediately stop the service, remove all processed logs, and disconnect the agent.\n\nAre you sure?"
             : "Are you sure you want to delete this group?";
         if (!confirm(msg)) return;
-        const res = await deleteGroupAction(group.id);
-        if (res.error) alert(`Error: ${res.error}`);
-        else fetchGroups();
+        setError(null);
+        setSaving(true);
+        try {
+            const res = await deleteGroupAction(group.id);
+            if (res.error) setError(res.error);
+            else fetchGroups();
+        } catch (e: any) {
+            setError(e.message || "Failed to delete group.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSaveEdit = async () => {
-        if (!editingGroup) return;
-        const res = await updateGroupAction(editingGroup.id, {
-            name: editingGroup.name,
-            description: editingGroup.description
-        });
-        if (res.error) alert(`Error: ${res.error}`);
-        else { setEditingGroup(null); fetchGroups(); }
+        setError(null);
+        setSaving(true);
+        try {
+            const res = await updateGroupAction(editingGroup.id, {
+                name: editingGroup.name,
+                description: editingGroup.description
+            });
+            if (res.error) setError(res.error);
+            else { setEditingGroup(null); fetchGroups(); }
+        } catch (e: any) {
+            setError(e.message || "Failed to update group.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     useEffect(() => {
@@ -156,6 +178,18 @@ export default function GroupsPage() {
                     {t('add_community')}
                 </Button>
             </div>
+
+            {error && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="h-5 w-5 text-destructive font-black" />
+                        <p className="text-sm text-destructive font-medium">{error}</p>
+                    </div>
+                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-lg cursor-pointer">
+                        <X className="h-4 w-4 text-destructive" />
+                    </button>
+                </div>
+            )}
 
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
