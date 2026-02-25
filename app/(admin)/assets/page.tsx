@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, ReactNode, ReactElement, cloneElement } from "react";
-import { PremiumCard } from "@/components/ui/PremiumCard";
 import {
     Smartphone,
     QrCode,
@@ -83,20 +82,60 @@ interface TabGroup {
     items: TabItem[];
 }
 
-const TAB_GROUPS = [
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const TAB_GROUPS: { title: string; items: { id: TabId; key: string; icon: ReactElement; activeColor: string; activeBg: string; }[] }[] = [
     {
         title: "channels",
         items: [
-            { id: "collection", key: "whatsapp_collection", icon: <QrCode className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
-            { id: "official", key: "whatsapp_official", icon: <Send className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-100 dark:bg-green-900/30" },
-            { id: "telegram", key: "telegram_unit", icon: <Bot className="h-4 w-4" />, activeColor: "text-sky-600 dark:text-sky-400", activeBg: "bg-sky-100 dark:bg-sky-900/30" },
+            { id: "collection", key: "whatsapp_collection", icon: <QrCode className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-600/10" },
+            { id: "official", key: "whatsapp_official", icon: <Send className="h-4 w-4" />, activeColor: "text-green-600 dark:text-green-400", activeBg: "bg-green-600/10" },
+            { id: "telegram", key: "telegram_unit", icon: <Bot className="h-4 w-4" />, activeColor: "text-sky-600 dark:text-sky-400", activeBg: "bg-sky-600/10" },
         ],
     },
     {
         title: "intelligence",
         items: [
             { id: "messages", key: "message_protocol", icon: <MessageSquare className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
-            { id: "prompts", key: "neural_prompts", icon: <Brain className="h-4 w-4" />, activeColor: "text-amber-600 dark:text-amber-400", activeBg: "bg-amber-100 dark:bg-amber-900/30" },
+            { id: "prompts", key: "neural_prompts", icon: <Brain className="h-4 w-4" />, activeColor: "text-amber-600 dark:text-amber-400", activeBg: "bg-amber-600/10" },
             { id: "monitor", key: "intelligence_monitor", icon: <Activity className="h-4 w-4" />, activeColor: "text-primary", activeBg: "bg-primary/10" },
         ],
     },
@@ -168,6 +207,22 @@ export default function AdminAssetsPage() {
     const [globalTemplateSettings, setGlobalTemplateSettings] = useState<Record<string, string>>({});
     const [loadStats, setLoadStats] = useState<AssetStats>({ presetCounts: {}, platformCounts: {} });
     const [loading, setLoading] = useState(true);
+    const [syncingTemplates, setSyncingTemplates] = useState(false);
+
+    const handleSyncTemplates = async () => {
+        setSyncingTemplates(true);
+        try {
+            const res = await syncMetaTemplates();
+            if (res.success) {
+                alert(`${t("conected_success")} ${res.count} templates processados.`);
+                fetchAll();
+            }
+        } catch (e: any) {
+            alert(e.message || t("connection_failed"));
+        } finally {
+            setSyncingTemplates(false);
+        }
+    };
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
@@ -182,13 +237,13 @@ export default function AdminAssetsPage() {
                 getWhatsAppTemplates(),
                 getGlobalTemplateSettings(),
             ]);
-            setOutboundMeta(meta || []);
-            setInstances(inst || []);
-            setPresets(pres || []);
-            setLoadStats(stats as AssetStats);
+            setOutboundMeta((meta || []) as WhatsAppConfig[]);
+            setInstances((inst || []) as EvolutionInstance[]);
+            setPresets((pres || []) as AgentPreset[]);
+            setLoadStats((stats as AssetStats) || { presetCounts: {}, platformCounts: {} });
             setTokenUsage(usage || []);
             setAiSettings(ai || {});
-            setTemplates(tmpls || []);
+            setTemplates((tmpls || []) as WhatsAppTemplate[]);
             setGlobalTemplateSettings(gTmpls || {});
         } catch (e) {
             console.error("Failed to fetch assets:", e);
@@ -212,87 +267,80 @@ export default function AdminAssetsPage() {
                 </p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-10">
-                {/* Section Navigation */}
-                <aside className="lg:w-56 shrink-0">
-                    <PremiumCard className="p-2 space-y-1">
-                        {TAB_GROUPS.map((group, gi) => (
-                            <div key={group.title}>
-                                {gi > 0 && <Separator className="my-2" />}
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-3 pt-2 pb-1.5">
-                                    {t(group.title)}
-                                </p>
-                                {group.items.map((tab) => {
-                                    const isActive = activeTab === tab.id;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={cn(
-                                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all cursor-pointer",
-                                                isActive
-                                                    ? "bg-primary/5 dark:bg-primary/10 border-l-2 border-primary text-foreground font-semibold"
-                                                    : "border-l-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "flex items-center justify-center h-7 w-7 rounded-md shrink-0 transition-colors",
-                                                isActive ? cn(tab.activeBg, tab.activeColor) : "bg-muted text-muted-foreground"
-                                            )}>
-                                                {tab.icon}
-                                            </div>
-                                            {t(tab.key)}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </PremiumCard>
-                </aside>
-
-                {/* Main Content Area */}
-                <main className="flex-1 min-w-0">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activeTab}
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            {loading ? (
-                                <LoadingSkeleton />
-                            ) : (
-                                <div className="space-y-6">
-                                    {activeTab === "collection" && (
-                                        <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} t={t} />
-                                    )}
-                                    {activeTab === "official" && (
-                                        <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} t={t} />
-                                    )}
-                                    {activeTab === "telegram" && (
-                                        <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} t={t} />
-                                    )}
-                                    {activeTab === "messages" && (
-                                        <MessagesTab
-                                            templates={templates}
-                                            globalTemplateSettings={globalTemplateSettings}
-                                            onRefresh={fetchAll}
-                                            t={t}
-                                        />
-                                    )}
-                                    {activeTab === "monitor" && (
-                                        <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
-                                    )}
-                                    {activeTab === "prompts" && (
-                                        <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
-                                    )}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabId)} className="w-full">
+                <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Section Navigation */}
+                    <aside className="lg:w-64 shrink-0">
+                        <TabsList className="flex flex-col h-auto bg-transparent border-none gap-6 p-0 items-start">
+                            {TAB_GROUPS.map((group) => (
+                                <div key={group.title} className="w-full space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-2 pb-2">
+                                        {t(group.title)}
+                                    </p>
+                                    <div className="space-y-1">
+                                        {group.items.map((tab) => (
+                                            <TabsTrigger
+                                                key={tab.id}
+                                                value={tab.id}
+                                                className={cn(
+                                                    "w-full justify-start gap-3 h-11 px-3 text-[13px] font-medium transition-all",
+                                                    "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-muted/50",
+                                                    "data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-sm"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "flex items-center justify-center h-8 w-8 rounded-lg shrink-0 transition-colors",
+                                                    activeTab === tab.id ? tab.activeBg : "bg-muted/50"
+                                                )}>
+                                                    {cloneElement(tab.icon as ReactElement<{ className?: string }>, {
+                                                        className: cn("h-4 w-4", activeTab === tab.id ? tab.activeColor : "text-muted-foreground/70")
+                                                    })}
+                                                </div>
+                                                {t(tab.key)}
+                                            </TabsTrigger>
+                                        ))}
+                                    </div>
                                 </div>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </main>
-            </div>
+                            ))}
+                        </TabsList>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 min-w-0">
+                        {loading ? (
+                            <LoadingSkeleton />
+                        ) : (
+                            <div className="relative">
+                                <TabsContent value="collection" className="mt-0 focus-visible:ring-0">
+                                    <CollectionTab instances={evolutionInstances} loadStats={loadStats} onRefresh={fetchAll} t={t} />
+                                </TabsContent>
+                                <TabsContent value="official" className="mt-0 focus-visible:ring-0">
+                                    <OfficialTab configs={outboundMeta} loadStats={loadStats} onRefresh={fetchAll} t={t} />
+                                </TabsContent>
+                                <TabsContent value="telegram" className="mt-0 focus-visible:ring-0">
+                                    <TelegramTab instances={telegramInstances} presets={presets} loadStats={loadStats} onRefresh={fetchAll} t={t} />
+                                </TabsContent>
+                                <TabsContent value="messages" className="mt-0 focus-visible:ring-0">
+                                    <MessagesTab
+                                        templates={templates}
+                                        globalTemplateSettings={globalTemplateSettings}
+                                        onRefresh={fetchAll}
+                                        syncing={syncingTemplates}
+                                        handleSync={handleSyncTemplates}
+                                        t={t}
+                                    />
+                                </TabsContent>
+                                <TabsContent value="monitor" className="mt-0 focus-visible:ring-0">
+                                    <MonitorTab usage={tokenUsage} aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
+                                </TabsContent>
+                                <TabsContent value="prompts" className="mt-0 focus-visible:ring-0">
+                                    <PromptsTab aiSettings={aiSettings} onRefresh={fetchAll} t={t} />
+                                </TabsContent>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            </Tabs>
         </div>
     );
 }
@@ -364,14 +412,15 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
                 return;
             }
 
+            const instanceId = result.instance?.id || "";
             setNewName("");
             setShowNewForm(false);
             onRefresh();
 
             // Open QR modal if we got a QR from creation
             if (result.qr) {
-                setQrModal({ open: true, qr: result.qr, name: newName, dbId: result.instance?.id, state: "qr_ready" });
-                startPolling(newName.trim(), result.instance?.id);
+                setQrModal({ open: true, qr: result.qr, name: newName, dbId: instanceId, state: "qr_ready" });
+                startPolling(newName.trim(), instanceId);
             }
         } catch (e: any) {
             setError(e.message || t("connection_failed"));
@@ -446,8 +495,8 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         if (!confirm(`Remover instância "${inst.instance_name}"? Isso a desconecta da Evolution API também.`)) return;
         try {
             const result = await deleteEvolutionInstance(inst.id, inst.instance_name);
-            if (result.error) {
-                setError(result.error);
+            if ((result as any).error) {
+                setError((result as any).error);
             } else {
                 onRefresh();
             }
@@ -542,7 +591,7 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
     if (configStatus === "loading") {
         return (
             <div className="flex items-center justify-center p-12">
-                <RefreshCw className="h-6 w-6 text-green-500 animate-spin" />
+                <RefreshCw className="h-6 w-6 text-primary animate-spin" />
             </div>
         );
     }
@@ -551,85 +600,92 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         return (
             <div className="max-w-2xl mx-auto space-y-6">
                 <div className="flex items-center gap-3 mb-6">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setEditingConfig(false)}
                         disabled={configStatus === "missing"}
-                        className={`p-2 hover:bg-background/80 rounded-lg transition-colors border border-card-border ${configStatus === "missing" ? "hidden" : ""}`}
+                        className={cn(configStatus === "missing" && "hidden")}
                     >
-                        <ArrowLeft className="h-5 w-5 text-text-muted hover:text-foreground" />
-                    </button>
-                    <h2 className="text-xl font-bold text-foreground">{t("evolution_config_title")}</h2>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <h2 className="text-xl font-bold tracking-tight">{t("evolution_config_title")}</h2>
                 </div>
 
-                <PremiumCard className="p-8 space-y-6">
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
-                        <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                            <p className="text-sm text-blue-300 font-medium">{t("credentials_needed")}</p>
-                            <p className="text-xs text-blue-400/80">
-                                {t("credentials_desc")}
-                            </p>
+                <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
+                    <CardHeader>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex gap-3">
+                            <Info className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                                <p className="text-sm text-blue-300 font-medium">{t("credentials_needed")}</p>
+                                <p className="text-xs text-blue-400/80">
+                                    {t("credentials_desc")}
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("url_api")}</Label>
+                                <div className="relative">
+                                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        value={configForm.url}
+                                        onChange={(e) => setConfigForm(prev => ({ ...prev, url: e.target.value }))}
+                                        placeholder="https://api.seudominio.com"
+                                        className="pl-9 h-11"
+                                    />
+                                </div>
+                            </div>
 
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-text-muted">{t("url_api")}</label>
-                            <div className="relative">
-                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
-                                <input
-                                    type="text"
-                                    value={configForm.url}
-                                    onChange={(e) => setConfigForm(prev => ({ ...prev, url: e.target.value }))}
-                                    placeholder="https://api.seudominio.com"
-                                    className="w-full bg-background border border-card-border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-text-muted focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-all outline-none"
-                                />
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("global_api_key")}</Label>
+                                <div className="relative">
+                                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        value={configForm.apiKey}
+                                        onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
+                                        placeholder="Ex: 44299384-..."
+                                        className="pl-9 h-11"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-text-muted">{t("global_api_key")}</label>
-                            <div className="relative">
-                                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted" />
-                                <input
-                                    type="text"
-                                    value={configForm.apiKey}
-                                    onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
-                                    placeholder="Ex: 44299384-..."
-                                    className="w-full bg-background border border-card-border rounded-xl pl-10 pr-4 py-3 text-foreground placeholder:text-text-muted focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/50 transition-all outline-none"
-                                />
+                        {/* Connection Test Feedback */}
+                        {connTest.message && (
+                            <div className={cn(
+                                "p-3 rounded-lg flex items-center gap-2 text-sm",
+                                connTest.status === "success" ? "bg-green-500/10 text-green-500" :
+                                    connTest.status === "error" ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"
+                            )}>
+                                {connTest.status === "testing" && <RefreshCw className="h-4 w-4 animate-spin" />}
+                                {connTest.status === "success" && <Check className="h-4 w-4" />}
+                                {connTest.status === "error" && <AlertTriangle className="h-4 w-4" />}
+                                <span className="text-xs font-medium">{connTest.message}</span>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Connection Test Feedback */}
-                    {connTest.message && (
-                        <div className={`p-3 rounded-xl flex items-center gap-2 text-sm ${connTest.status === "success" ? "bg-green-500/10 text-green-500" : connTest.status === "error" ? "bg-red-500/10 text-red-500" : "bg-blue-500/10 text-blue-500"}`}>
-                            {connTest.status === "testing" && <RefreshCw className="h-4 w-4 animate-spin" />}
-                            {connTest.status === "success" && <Check className="h-4 w-4" />}
-                            {connTest.status === "error" && <AlertTriangle className="h-4 w-4" />}
-                            {connTest.message}
-                        </div>
-                    )}
-
-                    <div className="flex justify-end pt-4 gap-3">
-                        <button
+                        )}
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-3 pt-2">
+                        <Button
+                            variant="outline"
                             onClick={handleTestConnection}
                             disabled={connTest.status === "testing" || !configForm.url || !configForm.apiKey}
-                            className="bg-background border border-card-border hover:bg-background/80 text-foreground font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                            className="h-10 px-6"
                         >
                             {t("test_connection")}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleSaveConfig}
                             disabled={saving || !configForm.url || !configForm.apiKey}
-                            className="bg-brand-500 hover:bg-brand-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="h-10 px-6 gap-2"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {saving ? t("saving") : t("save_configuration")}
-                        </button>
-                    </div>
-                </PremiumCard>
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
         );
     }
@@ -638,298 +694,337 @@ function CollectionTab({ instances, loadStats, onRefresh, t }: { instances: any[
         <div className="space-y-6">
             {/* Error Banner */}
             {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
-                        <p className="text-sm text-red-400">{error}</p>
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                        <p className="text-[13px] font-medium text-destructive">{error}</p>
                     </div>
-                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-lg cursor-pointer">
-                        <X className="h-4 w-4 text-red-400" />
-                    </button>
+                    <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-7 w-7 text-destructive hover:bg-destructive/10">
+                        <X className="h-4 w-4" />
+                    </Button>
                 </div>
             )}
 
             {/* Header / Actions Row */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                {/* Stats Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 w-full">
-                    <StatCard icon={<QrCode />} color="green" label={t("instances_evolution")} value={instances.length} sub={t("configuradas")} />
-                    <StatCard icon={<Smartphone />} color="green" label={t("connected")} value={instances.filter(i => i.status === "open").length} sub={`${t("de")} ${instances.length}`} />
-                    <StatCard icon={<Activity />} color="green" label={t("groups_whatsapp")} value={loadStats.platformCounts?.whatsapp || 0} sub={t("collecting_messages")} />
+                    <StatCard icon={<QrCode className="h-4 w-4" />} color="green" label={t("instances_evolution")} value={instances.length} sub={t("configuradas")} />
+                    <StatCard icon={<Smartphone className="h-4 w-4" />} color="green" label={t("connected")} value={instances.filter(i => i.status === "open").length} sub={`${t("de")} ${instances.length}`} />
+                    <StatCard icon={<Activity className="h-4 w-4" />} color="green" label={t("groups_whatsapp")} value={loadStats.platformCounts?.whatsapp || 0} sub={t("collecting_messages")} />
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                    {connTest.message && connTest.status !== "idle" && (
-                        <div className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-semibold ${connTest.status === "success" ? "bg-green-500/10 text-green-600 dark:text-green-500" : connTest.status === "error" ? "bg-red-500/10 text-red-600 dark:text-red-500" : "bg-blue-500/10 text-blue-600 dark:text-blue-500"}`}>
-                            {connTest.status === "testing" && <RefreshCw className="h-3 w-3 animate-spin" />}
-                            {connTest.message}
-                        </div>
-                    )}
-                    <button
-                        onClick={handleTestConnection}
-                        disabled={connTest.status === "testing"}
-                        className="p-2.5 bg-background hover:bg-background/80 text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer"
-                        title="Testar Conexão API"
-                    >
-                        <Activity className={`h-4 w-4 ${connTest.status === "testing" ? "animate-pulse" : ""}`} />
-                    </button>
-                    <button
-                        onClick={() => setEditingConfig(true)}
-                        className="p-2.5 bg-background hover:bg-background/80 text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer"
-                        title="Configurações da API"
-                    >
-                        <Settings className="h-4 w-4" />
-                    </button>
-                    <button
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleTestConnection}
+                                    disabled={connTest.status === "testing"}
+                                    className="h-10 w-10"
+                                >
+                                    <Activity className={cn("h-4 w-4", connTest.status === "testing" && "animate-pulse")} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Testar Conexão API</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setEditingConfig(true)}
+                                    className="h-10 w-10"
+                                >
+                                    <Settings className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Configurações da API</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <Button
+                        variant="outline"
                         onClick={handleSync}
                         disabled={syncing}
-                        className="flex items-center gap-2 px-4 py-2 bg-background hover:bg-background/80 text-sm font-medium text-text-muted hover:text-foreground rounded-lg border border-card-border transition-all cursor-pointer disabled:opacity-50"
+                        className="h-10 gap-2 text-muted-foreground hover:text-foreground"
                     >
-                        <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
                         {syncing ? t("syncing") : t("sync")}
-                    </button>
+                    </Button>
+
+                    <Button
+                        onClick={() => setShowNewForm(true)}
+                        className="h-10 gap-2 shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        {t("add_instance")}
+                    </Button>
                 </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {instances.map((inst) => {
                     const statusInfo = getStatusColor(inst.status);
                     return (
-                        <PremiumCard key={inst.id} className="p-0 border border-white/5 rounded-sm overflow-hidden bg-navy-950/20 group">
-                            <div className="p-6 flex items-center justify-between gap-6 bg-transparent border-l-2 border-l-brand-500 hover:bg-white/5 transition-all">
-                                <div className="flex items-center gap-5 min-w-0">
-                                    <div className={cn(
-                                        "h-10 w-10 rounded-sm flex items-center justify-center border",
-                                        statusInfo.bg, statusInfo.border
-                                    )}>
-                                        <QrCode className={cn("h-5 w-5", statusInfo.text)} />
+                        <Card key={inst.id} className="group relative overflow-hidden border-border/40 hover:border-primary/30 transition-all bg-card/30 backdrop-blur-sm">
+                            <div className={cn("absolute top-0 left-0 w-1 h-full",
+                                inst.status === "open" ? "bg-green-500" :
+                                    inst.status === "connecting" ? "bg-amber-500" : "bg-muted"
+                            )} />
+                            <CardHeader className="p-4 pb-2">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm font-bold tracking-tight uppercase truncate pr-4">
+                                        {inst.instance_name}
+                                    </CardTitle>
+                                    <Badge variant="outline" className={cn("h-5 text-[10px] font-bold uppercase tracking-widest", statusInfo.bg, statusInfo.text, statusInfo.border)}>
+                                        <div className={cn("h-1 w-1 rounded-full bg-current mr-1.5", inst.status === "open" && "animate-pulse")} />
+                                        {statusInfo.label}
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0 space-y-3">
+                                <div className="flex items-center gap-4 text-[11px] text-muted-foreground font-medium">
+                                    <div className="flex items-center gap-1.5">
+                                        <MessageSquare className="h-3.5 w-3.5 opacity-60" />
+                                        <span>{(inst.groups_count ?? 0) === 1 ? t("unit_synced", { count: inst.groups_count ?? 0 }) : t("units_synced", { count: inst.groups_count ?? 0 })}</span>
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[13px] font-black text-white uppercase tracking-widest truncate">{inst.instance_name}</p>
-                                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                            {/* Connection State Badge */}
-                                            <div className={cn("flex items-center gap-2 px-3 py-1 rounded-none border", statusInfo.bg, statusInfo.border)}>
-                                                <div className={cn("h-1.5 w-1.5 bg-current", inst.status === "open" ? "animate-pulse" : "")} />
-                                                <span className={cn("text-[9px] font-black uppercase tracking-[0.2em]", statusInfo.text)}>{statusInfo.label}</span>
-                                            </div>
-                                            <span className="text-[9px] font-black text-secondary-gray-500 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none uppercase tracking-widest">
-                                                {(inst.groups_count ?? 0) === 1 ? t("unit_synced", { count: inst.groups_count ?? 0 }) : t("units_synced", { count: inst.groups_count ?? 0 })}
-                                            </span>
-                                            {inst.instance_key && (
-                                                <span className="text-[9px] font-black text-secondary-gray-600 bg-navy-950/40 border border-white/5 px-2 py-1 rounded-none font-mono tracking-tight uppercase">
-                                                    ID: {inst.instance_key.slice(0, 12)}
-                                                </span>
-                                            )}
+                                    {inst.instance_key && (
+                                        <div className="font-mono opacity-60 tracking-tight">
+                                            ID: {inst.instance_key.slice(0, 8)}...
                                         </div>
-                                    </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                            <CardFooter className="p-4 pt-0 flex items-center justify-between border-t border-border/5 metadata-footer">
+                                <div className="flex items-center gap-1">
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    disabled={inst.status === "open"}
+                                                    onClick={() => handleConnect(inst)}
+                                                    className="h-8 w-8 text-muted-foreground hover:text-green-500 hover:bg-green-500/10"
+                                                >
+                                                    <QrCode className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t("protocol_link_qr")}</TooltipContent>
+                                        </Tooltip>
+
+                                        {inst.qr_code_base64 && inst.status !== "open" && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleOpenQr(inst)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10"
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>{t("inspect_qr")}</TooltipContent>
+                                            </Tooltip>
+                                        )}
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={async () => {
+                                                        await setSystemBot(inst.id, "admin_collection_instances");
+                                                        onRefresh();
+                                                    }}
+                                                    className={cn(
+                                                        "h-8 w-8",
+                                                        inst.is_system_bot ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                                    )}
+                                                >
+                                                    <Star className={cn("h-3.5 w-3.5", inst.is_system_bot && "fill-current")} />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{inst.is_system_bot ? t("system_core_active") : t("map_to_system_core")}</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
 
-                                <div className="flex items-center gap-2.5 shrink-0">
-                                    {/* Connect / Generate QR */}
-                                    {inst.status !== "open" && (
-                                        <button
-                                            onClick={() => handleConnect(inst)}
-                                            className="p-3 rounded-sm border border-green-500/20 bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors cursor-pointer"
-                                            title={t("protocol_link_qr")}
-                                        >
-                                            <QrCode className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                    {/* View existing QR */}
-                                    {inst.qr_code_base64 && inst.status !== "open" && (
-                                        <button
-                                            onClick={() => handleOpenQr(inst)}
-                                            className="p-3 rounded-sm border border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors cursor-pointer"
-                                            title={t("inspect_qr")}
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={async () => {
-                                            await setSystemBot(inst.id, "admin_collection_instances");
-                                            onRefresh();
-                                        }}
-                                        className={cn(
-                                            "p-3 rounded-sm border transition-all cursor-pointer",
-                                            inst.is_system_bot ? "bg-brand-500/10 text-brand-500 border-brand-500/30" : "bg-navy-950 border-white/5 text-secondary-gray-600 hover:text-brand-500 hover:border-brand-500/30"
-                                        )}
-                                        title={inst.is_system_bot ? t("system_core_active") : t("map_to_system_core")}
-                                    >
-                                        <Star className={cn("h-4 w-4", inst.is_system_bot ? "fill-current" : "")} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggle(inst.id, inst.is_active)}
-                                        className={cn(
-                                            "p-3 rounded-sm border transition-all cursor-pointer",
-                                            inst.is_active ? "bg-green-500/5 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "bg-red-500/5 border-red-500/20 text-red-500 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500"
-                                        )}
-                                        title={inst.is_active ? t("terminate_protocol") : t("initialize_protocol")}
-                                    >
-                                        <Power className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(inst)}
-                                        className="p-3 rounded-sm border border-red-500/20 bg-red-500/5 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
-                                        title={t("purge_identity")}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
+                                <div className="flex items-center gap-1">
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className="flex items-center mr-2">
+                                                    <Switch
+                                                        checked={inst.is_active}
+                                                        onCheckedChange={() => handleToggle(inst.id, inst.is_active)}
+                                                        className="scale-75"
+                                                    />
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{inst.is_active ? t("terminate_protocol") : t("initialize_protocol")}</TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(inst)}
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{t("purge_identity")}</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
-                            </div>
-                        </PremiumCard>
+                            </CardFooter>
+                        </Card>
                     );
                 })}
             </div>
 
             {/* New Instance Form */}
             {showNewForm ? (
-                <PremiumCard className="p-8 border-2 border-dashed border-green-500/30 bg-green-500/5 rounded-none">
-                    <h3 className="text-xl font-black text-white mb-4 flex items-center gap-3 uppercase tracking-tighter">
-                        <Plus className="h-6 w-6 text-green-500" /> {t("new_registry_unit")}
-                    </h3>
-                    <p className="text-[11px] font-medium text-secondary-gray-500 mb-6 uppercase tracking-widest bg-navy-950/40 p-3 border border-white/5">
-                        {t("unit_identity_desc")}
-                    </p>
-                    <div className="space-y-4">
-                        <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("unit_identity")}</label>
-                        <input
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            placeholder="ex: unit-alpha-registry"
-                            className="w-full max-w-md bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-green-500/50 outline-none transition-all"
-                            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                        />
-                    </div>
-                    <div className="flex items-center gap-4 mt-8">
-                        <button
+                <Card className="border-2 border-dashed border-green-500/30 bg-green-500/5 overflow-hidden">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-bold flex items-center gap-3 uppercase tracking-tight">
+                            <Plus className="h-6 w-6 text-green-500" /> {t("new_registry_unit")}
+                        </CardTitle>
+                        <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-background/50 p-3 border border-border/40 rounded-sm">
+                            {t("unit_identity_desc")}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t("unit_identity")}</Label>
+                            <Input
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                placeholder="ex: unit-alpha-registry"
+                                className="max-w-md bg-background/50 border-border/40 focus:border-green-500/50"
+                                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                            />
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex items-center gap-3">
+                        <Button
                             onClick={handleCreate}
                             disabled={saving || !newName.trim()}
-                            className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer flex items-center gap-3"
+                            className="bg-green-600 hover:bg-green-700 h-10 px-8 flex items-center gap-3 uppercase text-[10px] font-bold tracking-widest"
                         >
                             {saving ? (
                                 <><RefreshCw className="h-4 w-4 animate-spin" /> {t("syncing")}</>
                             ) : (
                                 <><Plus className="h-4 w-4" /> {t("initialize_unit")}</>
                             )}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="outline"
                             onClick={() => { setShowNewForm(false); setError(null); }}
-                            className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer"
+                            className="h-10 px-8 uppercase text-[10px] font-bold tracking-widest"
                         >
                             {t("abort")}
-                        </button>
-                    </div>
-                </PremiumCard>
+                        </Button>
+                    </CardFooter>
+                </Card>
             ) : (
-                <button
+                <Button
+                    variant="outline"
                     onClick={() => setShowNewForm(true)}
-                    className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-green-500/30 transition-all group cursor-pointer bg-navy-950/20"
+                    className="w-full h-24 border-dashed border-border/60 hover:border-green-500/50 hover:bg-green-500/5 transition-all group flex flex-col gap-2"
                 >
-                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-green-500 transition-colors">
-                        <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
-                    </div>
-                </button>
+                    <Plus className="h-6 w-6 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground group-hover:text-green-500 transition-colors">{t("initialize_new_unit")}</span>
+                </Button>
             )}
 
             {/* QR Code Modal with Auto-Polling */}
-            <AnimatePresence>
-                {qrModal.open && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-                        onClick={handleCloseQrModal}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-background border border-card-border rounded-2xl p-8 max-w-sm w-full shadow-lg"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-foreground">{t("qr_code_title")}</h3>
-                                <button onClick={handleCloseQrModal} className="p-2 rounded-lg hover:bg-card-hover transition-colors cursor-pointer text-text-muted hover:text-foreground">
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
+            <Dialog open={qrModal.open} onOpenChange={(open) => !open && handleCloseQrModal()}>
+                <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden border-border/40">
+                    <DialogHeader className="p-6 pb-0">
+                        <DialogTitle className="text-xl font-bold">{t("qr_code_title")}</DialogTitle>
+                        <DialogDescription className="text-sm font-medium">{qrModal.name}</DialogDescription>
+                    </DialogHeader>
 
-                            <p className="text-sm font-medium text-text-muted mb-4">{qrModal.name}</p>
-
-                            {qrModal.state === "open" ? (
-                                <div className="text-center py-8">
-                                    <div className="h-16 w-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
-                                        <Check className="h-8 w-8 text-green-500" />
-                                    </div>
-                                    <p className="text-lg font-bold text-green-600 dark:text-green-500">{t("conected_success")}</p>
-                                    <p className="text-sm text-text-muted mt-2">{t("whatsapp_linked_success")}</p>
-                                    <p className="text-xs text-text-muted mt-1">{t("messages_collecting")}</p>
+                    <div className="p-6">
+                        {qrModal.state === "open" ? (
+                            <div className="text-center py-8">
+                                <div className="h-16 w-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
+                                    <Check className="h-8 w-8 text-green-500" />
                                 </div>
-                            ) : (
-                                <>
-                                    <div className="bg-white rounded-xl p-6 flex items-center justify-center min-h-[250px] border border-gray-200">
-                                        {qrModal.loading ? (
-                                            <div className="py-8 text-center">
-                                                <RefreshCw className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-3" />
-                                                <p className="text-gray-600 font-medium text-sm">{t("generating_qr")}</p>
-                                            </div>
-                                        ) : qrModal.error ? (
-                                            <div className="text-center py-8">
-                                                <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3" />
-                                                <p className="text-red-600 font-medium text-sm">{qrModal.error}</p>
-                                                <button
-                                                    onClick={() => qrModal.name && qrModal.dbId && handleOpenQr({ instance_name: qrModal.name, id: qrModal.dbId, status: qrModal.state })}
-                                                    className="mt-4 px-4 py-2 bg-background border border-card-border text-foreground text-sm font-medium rounded-lg hover:bg-card-hover transition-colors cursor-pointer"
-                                                >
-                                                    {t("try_again")}
-                                                </button>
-                                            </div>
-                                        ) : qrModal.qr ? (
-                                            <img src={qrModal.qr.startsWith("data:") ? qrModal.qr : `data:image/png;base64,${qrModal.qr}`} alt="QR Code" className="w-full h-auto rounded-lg" />
-                                        ) : (
-                                            <div className="py-8 text-center">
-                                                <p className="text-gray-500 text-sm">{t("qr_not_available")}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                <p className="text-lg font-bold text-green-600 dark:text-green-500">{t("conected_success")}</p>
+                                <p className="text-sm text-muted-foreground mt-2">{t("whatsapp_linked_success")}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{t("messages_collecting")}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-xl p-6 flex items-center justify-center min-h-[250px] border border-border/10">
+                                    {qrModal.loading ? (
+                                        <div className="py-8 text-center">
+                                            <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin mx-auto mb-3" />
+                                            <p className="text-muted-foreground font-medium text-sm">{t("generating_qr")}</p>
+                                        </div>
+                                    ) : qrModal.error ? (
+                                        <div className="text-center py-8">
+                                            <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-3" />
+                                            <p className="text-destructive font-medium text-sm">{qrModal.error}</p>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => qrModal.name && qrModal.dbId && handleOpenQr({ instance_name: qrModal.name, id: qrModal.dbId, status: qrModal.state })}
+                                                className="mt-4"
+                                            >
+                                                {t("try_again")}
+                                            </Button>
+                                        </div>
+                                    ) : qrModal.qr ? (
+                                        <img src={qrModal.qr.startsWith("data:") ? qrModal.qr : `data:image/png;base64,${qrModal.qr}`} alt="QR Code" className="w-full h-auto rounded-lg" />
+                                    ) : (
+                                        <div className="py-8 text-center">
+                                            <p className="text-muted-foreground text-sm">{t("qr_not_available")}</p>
+                                        </div>
+                                    )}
+                                </div>
 
-                                    <div className="flex items-center justify-center gap-2 mt-4">
-                                        <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                                        <p className="text-xs text-text-muted">
-                                            {t("waiting_scan")}
-                                        </p>
-                                    </div>
-
-                                    <p className="text-xs text-text-muted text-center mt-2">
-                                        {t("scan_instructions")}
+                                <div className="flex items-center justify-center gap-2 mt-6">
+                                    <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                                    <p className="text-xs text-muted-foreground">
+                                        {t("waiting_scan")}
                                     </p>
-                                </>
-                            )}
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                                </div>
+
+                                <p className="text-[10px] text-muted-foreground text-center mt-3 font-semibold uppercase tracking-wider">
+                                    {t("scan_instructions")}
+                                </p>
+                            </>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Info Card */}
-            <PremiumCard className="p-5 bg-green-500/5 border border-green-500/10">
-                <div className="flex items-start gap-3">
+            <Card className="border-green-500/20 bg-green-500/5">
+                <CardContent className="p-5 flex items-start gap-3">
                     <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center border border-green-500/20 shrink-0 mt-0.5">
                         <Shield className="h-5 w-5 text-green-600 dark:text-green-500" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-foreground">{t("auto_config")}</p>
-                        <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                        <p className="text-sm font-bold uppercase tracking-tight">{t("auto_config")}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed font-medium">
                             {t("auto_config_desc")}
-                            <strong className="text-green-600 dark:text-green-500 font-medium"> groupsIgnore: false</strong>,
-                            <strong className="text-amber-600 dark:text-amber-500 font-medium"> rejectCall: true</strong>,
-                            <strong className="text-foreground font-medium"> alwaysOnline: true</strong>.
+                            <strong className="text-green-600 dark:text-green-400"> groupsIgnore: false</strong>,
+                            <strong className="text-amber-600 dark:text-amber-400"> rejectCall: true</strong>,
+                            <span className="text-foreground"> alwaysOnline: true</span>.
                         </p>
                     </div>
-                </div>
-            </PremiumCard>
+                </CardContent>
+            </Card>
         </div>
     );
 }
@@ -954,15 +1049,14 @@ function OfficialTab({ configs, loadStats, onRefresh, t }: { configs: WhatsAppCo
             {showNew ? (
                 <OutboundMetaCard config={null} isNew groupCount={0} onRefresh={() => { onRefresh(); setShowNew(false); }} onCancel={() => setShowNew(false)} t={t} />
             ) : (
-                <button
+                <Button
+                    variant="outline"
                     onClick={() => setShowNew(true)}
-                    className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-emerald-500/30 transition-all group cursor-pointer bg-navy-950/20"
+                    className="w-full h-24 border-dashed border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group flex flex-col gap-2"
                 >
-                    <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-emerald-500 transition-colors">
-                        <Plus className="h-6 w-6" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("authorize_meta_protocol")}</span>
-                    </div>
-                </button>
+                    <Plus className="h-6 w-6 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground group-hover:text-emerald-500 transition-colors">{t("authorize_meta_protocol")}</span>
+                </Button>
             )}
         </div>
     );
@@ -1037,29 +1131,30 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
     };
 
     return (
-        <PremiumCard className={`p-5 bg-card hover:border-brand-300 transition-all ${isNew ? "border-2 border-dashed border-emerald-200" : "border border-border"}`}>
-            <div className="flex items-center justify-between mb-5">
+        <Card className={cn(
+            "overflow-hidden border-border/40 transition-all bg-card/30 backdrop-blur-sm",
+            isNew && "border-primary/50 border-dashed"
+        )}>
+            <CardHeader className="p-6 pb-4 flex flex-row items-center justify-between border-b border-border/5">
                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-sm bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                         <Shield className="h-5 w-5 text-emerald-500" />
                     </div>
                     <div>
-                        <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
+                        <CardTitle className="text-sm font-bold tracking-tight uppercase">
                             {isNew ? t("new_meta_protocol") : (config?.display_number || config?.phone_number_id)}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-2">
+                        </CardTitle>
+                        <div className="flex items-center gap-3 mt-1.5">
                             {!isNew && <StatusBadge active={config?.is_active || false} t={t} />}
-                            {!isNew && (
-                                <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 rounded-none border border-white/5">
-                                    {groupCount === 1 ? t("unit_syncs", { count: groupCount }) : t("unit_syncs", { count: groupCount })}
-                                </span>
-                            )}
                         </div>
                     </div>
                 </div>
+
                 {!isNew && (
-                    <div className="flex items-center gap-2.5">
-                        <button
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={async () => {
                                 if (!config?.id) return;
                                 setError(null);
@@ -1068,88 +1163,113 @@ function OutboundMetaCard({ config, isNew, groupCount, onRefresh, onCancel, t }:
                                 else onRefresh();
                             }}
                             className={cn(
-                                "p-3 rounded-sm border transition-all cursor-pointer",
-                                config?.is_system_bot ? "bg-brand-500/10 text-brand-500 border-brand-500/30" : "bg-navy-950 border-white/5 text-secondary-gray-600 hover:text-brand-500 hover:border-brand-500/30"
+                                "h-8 w-8",
+                                config?.is_system_bot ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
                             )}
                             title={config?.is_system_bot ? "System Core Active" : "Map to System Core"}
                         >
                             <Star className={cn("h-4 w-4", config?.is_system_bot ? "fill-current" : "")} />
-                        </button>
-                        <button onClick={handleToggle} className={cn(
-                            "p-3 rounded-sm border transition-all cursor-pointer",
-                            config.is_active ? "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-500"
-                        )}>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleToggle}
+                            className={cn(
+                                "h-8 w-8",
+                                config?.is_active ? "text-green-500 hover:text-red-500 bg-green-500/10 hover:bg-red-500/10" : "text-red-500 hover:text-green-500 bg-red-500/10 hover:bg-green-500/10"
+                            )}
+                        >
                             <Power className="h-4 w-4" />
-                        </button>
-                        <button onClick={handleDelete} className="p-3 rounded-sm bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer">
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDelete}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
                             <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                     </div>
                 )}
-            </div>
+            </CardHeader>
 
-            {/* Error Banner */}
-            {error && (
-                <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
-                        <p className="text-sm text-red-400">{error}</p>
+            <CardContent className="p-6 space-y-6">
+                {error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                            <p className="text-xs font-semibold text-destructive">{error}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-destructive hover:bg-destructive/10">
+                            <X className="h-3 w-3" />
+                        </Button>
                     </div>
-                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-lg cursor-pointer">
-                        <X className="h-4 w-4 text-red-400" />
-                    </button>
-                </div>
-            )}
+                )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <InputField label="Phone Number ID" value={form.phone_number_id} onChange={(v) => setForm({ ...form, phone_number_id: v })} placeholder="123456789" />
-                <InputField label="WABA ID" value={form.waba_id} onChange={(v) => setForm({ ...form, waba_id: v })} placeholder="1234567890" />
-                <InputField label="Display Number" value={form.display_number} onChange={(v) => setForm({ ...form, display_number: v })} placeholder="+55 11 99999-0000" />
-                <div>
-                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1 mb-2 block">{t("cryptographic_token")}</label>
-                    <div className="relative">
-                        <input
-                            type={showToken ? "text" : "password"}
-                            value={form.access_token}
-                            onChange={(e) => setForm({ ...form, access_token: e.target.value })}
-                            placeholder="EAAxxxxxxx..."
-                            className="w-full bg-navy-950/40 border border-white/5 rounded-none px-4 py-4 pr-12 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 focus:outline-none transition-all font-mono"
-                        />
-                        <button onClick={() => setShowToken(!showToken)} className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-gray-600 hover:text-white cursor-pointer transition-colors p-2 rounded-sm hover:bg-white/5">
-                            {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InputField label="Phone Number ID" value={form.phone_number_id} onChange={(v) => setForm({ ...form, phone_number_id: v })} placeholder="123456789" />
+                    <InputField label="WABA ID" value={form.waba_id} onChange={(v) => setForm({ ...form, waba_id: v })} placeholder="1234567890" />
+                    <InputField label="Display Number" value={form.display_number} onChange={(v) => setForm({ ...form, display_number: v })} placeholder="+55 11 99999-0000" />
+                    <div className="space-y-2">
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t("cryptographic_token")}</Label>
+                        <div className="relative">
+                            <Input
+                                type={showToken ? "text" : "password"}
+                                value={form.access_token}
+                                onChange={(e) => setForm({ ...form, access_token: e.target.value })}
+                                placeholder="EAAxxxxxxx..."
+                                className="bg-background/50 border-border/40 focus:border-primary/50 pr-12 font-mono h-10 text-sm"
+                            />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowToken(!showToken)}
+                                className="absolute right-1 top-1 text-muted-foreground hover:text-foreground h-8 w-8"
+                            >
+                                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {config?.verify_token && (
-                <div className="mt-8 flex items-center gap-6 p-6 bg-navy-950/40 border border-white/5 rounded-none group">
-                    <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.2em] mb-2">{t("protocol_verify_token")}</span>
-                        <code className="text-[13px] text-brand-500 font-mono font-black tracking-tight truncate max-w-sm uppercase">{config.verify_token}</code>
+                {config?.verify_token && (
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 border border-border/40 rounded-lg group">
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{t("protocol_verify_token")}</span>
+                            <code className="text-[11px] text-primary font-mono font-bold tracking-tight truncate max-w-sm uppercase">{config.verify_token}</code>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={copyVerifyToken}
+                            className="ml-auto h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20"
+                        >
+                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                     </div>
-                    <button onClick={copyVerifyToken} className="ml-auto p-3 rounded-none hover:bg-brand-500/10 text-secondary-gray-600 hover:text-brand-500 transition-all cursor-pointer border border-transparent hover:border-brand-500/20">
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </button>
-                </div>
-            )}
+                )}
+            </CardContent>
 
-            <div className="flex items-center gap-4 mt-10 pt-8 border-t border-white/5">
-                <button
+            <CardFooter className="p-6 pt-0 flex items-center gap-3">
+                <Button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex-1 sm:flex-none px-10 py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
+                    className="flex-1 sm:flex-none h-10 px-8 flex items-center gap-3 uppercase text-[10px] font-bold tracking-widest bg-emerald-600 hover:bg-emerald-700"
                 >
                     {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {saving ? t("syncing") : t("authorize_registry")}
-                </button>
+                </Button>
                 {isNew && onCancel && (
-                    <button onClick={onCancel} className="px-10 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
+                    <Button
+                        variant="outline"
+                        onClick={onCancel}
+                        className="h-10 px-8 uppercase text-[10px] font-bold tracking-widest"
+                    >
                         {t("abort")}
-                    </button>
+                    </Button>
                 )}
-            </div>
-        </PremiumCard>
+            </CardFooter>
+        </Card>
     );
 }
 
@@ -1186,63 +1306,65 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard icon={<Bot />} color="blue" label={t("bots_telegram")} value={instances.length} sub={t("configuradas")} />
-                <StatCard icon={<Globe />} color="blue" label={t("active_groups")} value={telegramGroupCount} sub={t("monitored")} />
-                <StatCard icon={<Activity />} color="blue" label={t("linked_presets")} value={presets.length} sub={t("configuradas")} />
+                <StatCard icon={<Bot className="h-4 w-4" />} color="blue" label={t("bots_telegram")} value={instances.length} sub={t("configuradas")} />
+                <StatCard icon={<Globe className="h-4 w-4" />} color="blue" label={t("active_groups")} value={instances.reduce((acc, inst) => acc + (inst.groups_count || 0), 0)} sub={t("monitored")} />
+                <StatCard icon={<Activity className="h-4 w-4" />} color="blue" label={t("linked_presets")} value={presets.length} sub={t("configuradas")} />
             </div>
 
             {/* Existing Telegram Instances */}
             {instances.map((inst) => (
-                <PremiumCard key={inst.id} className="p-0 border border-white/5 rounded-none overflow-hidden bg-navy-950/20 group">
-                    <div className="p-6 flex items-center justify-between gap-6 border-l-2 border-l-blue-500 hover:bg-white/5 transition-all">
+                <Card key={inst.id} className="overflow-hidden border-border/40 transition-all bg-card/30 backdrop-blur-sm hover:border-sky-500/40 group">
+                    <CardContent className="p-6 flex items-center justify-between gap-6">
                         <div className="flex items-center gap-5 min-w-0">
                             <div className="h-12 w-12 rounded-sm bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
                                 <Bot className="h-6 w-6 text-blue-500" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none truncate">{inst.instance_name}</p>
-                                <div className="flex items-center gap-3 mt-2.5">
+                                <p className="text-sm font-bold tracking-tight uppercase truncate">{inst.instance_name}</p>
+                                <div className="flex items-center gap-3 mt-1.5">
                                     <StatusBadge active={inst.is_active || false} t={t} />
-                                    <span className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest bg-navy-950/40 px-2 py-1 border border-white/5">
+                                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-background/50 border-border/40">
                                         {inst.groups_count === 1 ? t("unit_syncs", { count: inst.groups_count }) : t("unit_syncs", { count: inst.groups_count })}
-                                    </span>
+                                    </Badge>
                                 </div>
                                 {inst.instance_key && (
-                                    <p className="text-[10px] text-secondary-gray-700 font-mono mt-2 tracking-tight uppercase">Protocol: ••••{inst.instance_key.slice(-8)}</p>
+                                    <p className="text-[10px] text-muted-foreground font-mono mt-2 tracking-tight uppercase">Protocol: ••••{inst.instance_key.slice(-8)}</p>
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2.5 shrink-0">
-                            <button
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={async () => {
                                     const result = await toggleCollectionStatus(inst.id, inst.is_active || false);
                                     if (result.error) alert(result.error);
                                     else onRefresh();
                                 }}
                                 className={cn(
-                                    "p-3 rounded-none border transition-all cursor-pointer",
-                                    inst.is_active ? "bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20" : "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/20"
+                                    "h-10 w-10",
+                                    inst.is_active ? "text-green-500 hover:text-red-500 bg-green-500/10 hover:bg-red-500/10" : "text-red-500 hover:text-green-500 bg-red-500/10 hover:bg-green-500/10"
                                 )}
                                 title={inst.is_active ? "Dormant" : "Awaken"}
                             >
                                 <Power className="h-4 w-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={async () => {
-                                    if (confirm("Purge Unit Identity?")) {
-                                        const result = await deleteCollectionInstance(inst.id);
-                                        if (result.error) alert(result.error);
-                                        else onRefresh();
-                                    }
+                                    if (!confirm(t("confirm_delete"))) return;
+                                    const result = await deleteCollectionInstance(inst.id);
+                                    if (result.error) alert(result.error);
+                                    else onRefresh();
                                 }}
-                                className="p-3 rounded-none bg-red-500/5 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer"
-                                title="Purge"
+                                className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
                                 <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                         </div>
-                    </div>
-                </PremiumCard>
+                    </CardContent>
+                </Card>
             ))}
 
             {/* Agent Presets with Edit Option */}
@@ -1254,47 +1376,70 @@ function TelegramTab({ instances, presets, loadStats, onRefresh, t }: { instance
             </div>
 
             {/* New Telegram Bot */}
-            {
-                showNewBot ? (
-                    <PremiumCard className="p-8 border-2 border-dashed border-blue-500/30 bg-blue-500/5 rounded-none">
-                        <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-tighter">
-                            <Plus className="h-6 w-6 text-blue-500" /> {t("new_telegram_bot_title")}
-                        </h3>
-
+            {showNewBot ? (
+                <Card className="border-2 border-dashed border-sky-500/30 bg-sky-500/5 overflow-hidden">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-bold flex items-center gap-3 uppercase tracking-tight">
+                            <Plus className="h-6 w-6 text-sky-500" /> {t("new_telegram_bot_title")}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                         {error && (
-                            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
+                            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
-                                    <p className="text-sm text-red-400">{error}</p>
+                                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                                    <p className="text-sm text-destructive">{error}</p>
                                 </div>
-                                <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
-                                    <X className="h-4 w-4 text-red-400" />
-                                </button>
+                                <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                                    <X className="h-4 w-4" />
+                                </Button>
                             </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <InputField label={t("bot_unit_identity")} value={newBotName} onChange={setNewBotName} placeholder="ex: IgnoBot-Primary-Registry" />
-                            <InputField label={t("cryptographic_bot_token")} value={newBotKey} onChange={setNewBotKey} placeholder="123456:ABC-DEF..." />
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{t("cryptographic_bot_token")}</Label>
+                                <Input
+                                    value={newBotKey}
+                                    onChange={(e) => setNewBotKey(e.target.value)}
+                                    placeholder="123456:ABC-DEF..."
+                                    className="bg-background/50 border-border/40 focus:border-sky-500/50 h-11 font-mono text-[13px]"
+                                />
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4 mt-8">
-                            <button onClick={handleCreateBot} disabled={saving || !newBotName.trim()} className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all disabled:opacity-50 cursor-pointer">
-                                {saving ? t("syncing") : t("initialize_bot_unit")}
-                            </button>
-                            <button onClick={() => setShowNewBot(false)} className="px-8 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer">
-                                {t("abort")}
-                            </button>
-                        </div>
-                    </PremiumCard>
-                ) : (
-                    <button onClick={() => setShowNewBot(true)} className="w-full p-8 border border-dashed border-white/5 rounded-none hover:border-blue-500/30 transition-all group cursor-pointer bg-navy-950/20">
-                        <div className="flex items-center justify-center gap-4 text-secondary-gray-600 group-hover:text-blue-500 transition-colors">
-                            <Plus className="h-6 w-6" />
-                            <span className="text-[11px] font-black uppercase tracking-[0.3em]">{t("initialize_new_unit")}</span>
-                        </div>
-                    </button>
-                )
-            }
-        </div >
+                    </CardContent>
+                    <CardFooter className="flex items-center gap-3">
+                        <Button
+                            onClick={handleCreateBot}
+                            disabled={saving || !newBotName.trim()}
+                            className="bg-sky-600 hover:bg-sky-700 h-11 px-8 flex items-center gap-3 uppercase text-[11px] font-bold tracking-widest"
+                        >
+                            {saving ? (
+                                <><RefreshCw className="h-4 w-4 animate-spin" /> {t("syncing")}</>
+                            ) : (
+                                <>{t("initialize_bot_unit")}</>
+                            )}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowNewBot(false)}
+                            className="h-11 px-8 uppercase text-[11px] font-bold tracking-widest"
+                        >
+                            {t("abort")}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            ) : (
+                <Button
+                    variant="outline"
+                    onClick={() => setShowNewBot(true)}
+                    className="w-full h-24 border-dashed border-border/60 hover:border-sky-500/50 hover:bg-sky-500/5 transition-all group flex flex-col gap-2"
+                >
+                    <Plus className="h-6 w-6 text-muted-foreground group-hover:text-sky-500 transition-colors" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground group-hover:text-sky-500 transition-colors">{t("initialize_new_unit")}</span>
+                </Button>
+            )}
+        </div>
     );
 }
 
@@ -1305,6 +1450,7 @@ function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: 
         telegram_bot_username: preset.telegram_bot_username || "",
         whatsapp_support_number: preset.whatsapp_support_number || "",
     });
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleSave = async () => {
@@ -1330,14 +1476,14 @@ function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: 
     };
 
     return (
-        <PremiumCard className="p-0 border-l-2 border-l-brand-500 bg-navy-950/20 border-white/5 hover:bg-white/5 transition-all rounded-none overflow-hidden">
+        <Card className="overflow-hidden border-border/40 transition-all bg-card/30 backdrop-blur-sm group hover:border-sky-500/40 border-l-2 border-l-sky-500">
             {editing ? (
-                <div className="p-6 space-y-6">
+                <CardContent className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{preset.name}</h4>
-                        <button onClick={() => setEditing(false)} className="p-2 hover:bg-white/5 rounded-none transition-colors text-secondary-gray-600 hover:text-white">
+                        <CardTitle className="text-sm font-bold tracking-tight uppercase leading-none">{preset.name}</CardTitle>
+                        <Button variant="ghost" size="icon" onClick={() => setEditing(false)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
                             <X className="h-4 w-4" />
-                        </button>
+                        </Button>
                     </div>
 
                     {error && (
@@ -1374,43 +1520,43 @@ function PresetCard({ preset, onRefresh, t }: { preset: AgentPreset; onRefresh: 
                     </div>
 
                     <div className="flex justify-end gap-3 pt-2">
-                        <button
+                        <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="px-6 py-3 bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest rounded-none hover:bg-brand-600 disabled:opacity-50 transition-all"
+                            className="bg-sky-600 hover:bg-sky-700 h-10 px-6 uppercase text-[10px] font-bold tracking-widest"
                         >
                             {saving ? t("syncing") : t("update_protocol")}
-                        </button>
+                        </Button>
                     </div>
-                </div>
+                </CardContent>
             ) : (
-                <div className="p-6 flex items-center justify-between gap-6">
+                <CardContent className="p-6 flex items-center justify-between gap-6">
                     <div className="min-w-0">
                         <div className="flex items-center gap-3">
-                            <p className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{preset.name}</p>
-                            <button onClick={() => setEditing(true)} className="p-2 hover:bg-white/5 rounded-none cursor-pointer text-secondary-gray-600 hover:text-white transition-all">
+                            <p className="text-sm font-bold tracking-tight uppercase leading-none">{preset.name}</p>
+                            <Button variant="ghost" size="icon" onClick={() => setEditing(true)} className="h-8 w-8 text-muted-foreground hover:text-sky-500 transition-colors">
                                 <Settings className="h-4 w-4" />
-                            </button>
+                            </Button>
                         </div>
                         {preset.bot_link ? (
-                            <a href={preset.bot_link} target="_blank" rel="noreferrer" className="text-[10px] font-black text-brand-500 hover:text-brand-400 transition-colors flex items-center gap-2 mt-2 uppercase tracking-widest">
+                            <a href={preset.bot_link} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-sky-500 hover:text-sky-400 transition-colors flex items-center gap-2 mt-2 uppercase tracking-tight">
                                 {preset.bot_link} <ArrowUpRight className="h-3 w-3" />
                             </a>
                         ) : (
-                            <p className="text-[10px] font-black text-amber-500/60 mt-2 uppercase tracking-widest italic">{t("protocol_missing_link")}</p>
+                            <p className="text-[11px] font-medium text-amber-500/60 mt-2 uppercase tracking-tight italic">{t("protocol_missing_link")}</p>
                         )}
-                        {preset.telegram_bot_username && <p className="text-[10px] font-black text-secondary-gray-600 mt-1 uppercase tracking-widest">@{preset.telegram_bot_username}</p>}
+                        {preset.telegram_bot_username && <p className="text-[10px] font-bold text-muted-foreground mt-1.5 uppercase tracking-widest">@{preset.telegram_bot_username}</p>}
                     </div>
                     <div className="flex items-center gap-6 shrink-0">
                         <div className="text-right hidden sm:block">
                             <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-widest mb-1">{t("context_integrity")}</p>
                             <p className="text-[11px] font-black text-white uppercase tracking-tighter">{preset.preserve_context ? t("status_open") : t("status_dormant")}</p>
                         </div>
-                        <StatusBadge active={preset.is_active} />
+                        <StatusBadge active={preset.is_active || false} t={t} />
                     </div>
-                </div>
+                </CardContent>
             )}
-        </PremiumCard>
+        </Card>
     );
 }
 
@@ -1432,69 +1578,75 @@ function MonitorTab({ usage, aiSettings, onRefresh, t }: { usage: TokenUsage[]; 
                     <StatCard icon={<AlertTriangle />} color="amber" label={t("top_consumer")} value={usage[0]?.name || "—"} sub={usage[0] ? `${usage[0].tokens.toLocaleString()} tokens` : ""} />
                 </div>
 
-                <PremiumCard className="p-8 bg-navy-950/20 border border-white/5 rounded-none">
-                    <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3 uppercase tracking-tighter">
-                        <Brain className="h-6 w-6 text-amber-500" />
-                        {t("metrics_title")}
-                    </h3>
+                <div className="grid grid-cols-1 gap-6">
+                    <Card className="border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden">
+                        <CardHeader>
+                            <CardTitle className="text-xl font-bold flex items-center gap-3 uppercase tracking-tight">
+                                <Brain className="h-6 w-6 text-amber-500" />
+                                {t("metrics_title")}
+                            </CardTitle>
+                        </CardHeader>
 
-                    {usage.length === 0 ? (
-                        <div className="text-center py-16 bg-navy-950/40 border border-dashed border-white/5 rounded-none">
-                            <Brain className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
-                            <p className="text-white font-black uppercase tracking-widest text-[11px]">{t("no_ingestion")}</p>
-                            <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose">{t("metrics_wait")}</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {usage.map((item, i) => (
-                                <div key={i} className="group">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <span className={cn(
-                                                "px-2 py-1 rounded-none text-[8px] font-black uppercase tracking-[0.2em] border",
-                                                item.platform === "whatsapp"
-                                                    ? "bg-green-500/10 text-green-500 border-green-500/20"
-                                                    : "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                            )}>
-                                                {item.platform === "whatsapp" ? "WA" : "TG"}
-                                            </span>
-                                            <span className="text-[11px] font-black text-white truncate uppercase tracking-widest">{item.name}</span>
-                                        </div>
-                                        <span className="text-[10px] font-mono font-black text-secondary-gray-500 tabular-nums shrink-0">
-                                            {item.tokens.toLocaleString()} TOKENS
-                                        </span>
-                                    </div>
-                                    <div className="h-1 bg-white/5 rounded-none overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${(item.tokens / maxTokens) * 100}%` }}
-                                            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: i * 0.1 }}
-                                            className={cn(
-                                                "h-full",
-                                                item.platform === "whatsapp" ? "bg-green-500" : "bg-blue-500"
-                                            )}
-                                        />
-                                    </div>
+                        <CardContent>
+                            {usage.length === 0 ? (
+                                <div className="text-center py-16 bg-background/40 border border-dashed border-border/40 rounded-lg">
+                                    <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                                    <p className="text-sm font-bold uppercase tracking-widest">{t("no_ingestion")}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-widest leading-loose">{t("metrics_wait")}</p>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </PremiumCard>
+                            ) : (
+                                <div className="space-y-6">
+                                    {usage.map((item, i) => (
+                                        <div key={i} className="group">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[8px] font-bold uppercase tracking-widest h-5",
+                                                        item.platform === "whatsapp"
+                                                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                            : "bg-sky-500/10 text-sky-500 border-sky-500/20"
+                                                    )}>
+                                                        {item.platform === "whatsapp" ? "WA" : "TG"}
+                                                    </Badge>
+                                                    <span className="text-sm font-bold truncate uppercase tracking-tight">{item.name}</span>
+                                                </div>
+                                                <span className="text-[10px] font-mono font-bold text-muted-foreground tabular-nums shrink-0">
+                                                    {item.tokens.toLocaleString()} TOKENS
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 bg-background/60 rounded-full overflow-hidden border border-border/20">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${(item.tokens / maxTokens) * 100}%` }}
+                                                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: i * 0.1 }}
+                                                    className={cn(
+                                                        "h-full rounded-full transition-all shadow-[0_0_8px_rgba(0,0,0,0.2)]",
+                                                        item.platform === "whatsapp" ? "bg-green-500" : "bg-sky-500"
+                                                    )}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {/* AI Config Section */}
             <div className="space-y-8">
-                <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
-                    <h2 className="text-xl font-black text-white tracking-widest flex items-center gap-4 uppercase">
-                        <Settings className="h-6 w-6 text-brand-500" />
+                <div className="flex items-center justify-between bg-card/30 backdrop-blur-sm p-6 border border-border/40 rounded-lg">
+                    <h2 className="text-xl font-bold tracking-tight flex items-center gap-4 uppercase">
+                        <Settings className="h-6 w-6 text-primary" />
                         {t("neural_protocol_keys")}
                     </h2>
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-secondary-gray-600 px-4 py-1.5 border border-white/5 rounded-none">
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-background/50 px-4 py-1.5 border-border/40">
                         {t("core_override")}
-                    </span>
+                    </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                     <AIKeyCard
                         title="X-AI Identity Protocol"
                         configKey="XAI_API_KEY"
@@ -1512,7 +1664,7 @@ function MonitorTab({ usage, aiSettings, onRefresh, t }: { usage: TokenUsage[]; 
                         t={t}
                     />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AIKeyCard
                         title="Google Gemini"
                         configKey="GOOGLE_API_KEY"
@@ -1553,20 +1705,22 @@ function MonitorTab({ usage, aiSettings, onRefresh, t }: { usage: TokenUsage[]; 
                     </div>
                 </div>
 
-                <PremiumCard className="p-8 bg-navy-950/20 border border-blue-500/20 rounded-none group hover:bg-navy-950/40 transition-all">
-                    <div className="flex items-start gap-5">
-                        <div className="h-12 w-12 rounded-sm bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0 mt-0.5">
-                            <Shield className="h-6 w-6 text-blue-500" />
+                <Card className="border-primary/20 bg-primary/5 group hover:bg-primary/10 transition-colors">
+                    <CardContent className="p-8">
+                        <div className="flex items-start gap-5">
+                            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 mt-0.5">
+                                <Shield className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold uppercase tracking-tight">{t("protocol_guard_title")}</p>
+                                <p className="text-[11px] text-muted-foreground mt-2 uppercase tracking-widest leading-loose">
+                                    {t("protocol_guard_desc")}
+                                    <strong className="text-primary ml-2"> {t("operational_note")}</strong> {t("operational_note_desc")}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-[13px] font-black text-white uppercase tracking-widest">{t("protocol_guard_title")}</p>
-                            <p className="text-[11px] text-secondary-gray-500 mt-2 uppercase tracking-widest leading-loose">
-                                {t("protocol_guard_desc")}
-                                <strong className="text-brand-500 ml-2"> {t("operational_note")}</strong> {t("operational_note_desc")}
-                            </p>
-                        </div>
-                    </div>
-                </PremiumCard>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
@@ -1610,86 +1764,77 @@ function AIKeyCard({ title, configKey, currentValue, onSave, description, t }: {
     };
 
     return (
-        <PremiumCard className="p-6 space-y-6 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">{title}</h3>
-                    {description && <p className="text-[9px] font-black text-secondary-gray-700 mt-2 uppercase tracking-widest leading-none">{description}</p>}
+        <Card className="overflow-hidden border-border/40 transition-all bg-card/30 backdrop-blur-sm hover:border-primary/40 group">
+            <CardHeader className="p-6 pb-4">
+                <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                        <CardTitle className="text-sm font-bold tracking-tight uppercase leading-none truncate">{title}</CardTitle>
+                        {description && <CardDescription className="text-[10px] font-bold text-muted-foreground mt-2 uppercase tracking-tight leading-tight">{description}</CardDescription>}
+                    </div>
+                    <Badge variant="outline" className={cn(
+                        "text-[9px] font-bold uppercase tracking-widest shrink-0 border h-5 px-2",
+                        currentValue ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-destructive/10 text-destructive border-destructive/20"
+                    )}>
+                        {currentValue ? t("status_open").toUpperCase() : t("status_qr_ready").toUpperCase()}
+                    </Badge>
                 </div>
-                <div className={cn(
-                    "px-3 py-1 rounded-none text-[9px] font-black uppercase tracking-[0.2em] border",
-                    currentValue ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
-                )}>
-                    {currentValue ? t("status_open").toUpperCase() : t("status_qr_ready").toUpperCase()}
-                </div>
-            </div>
+            </CardHeader>
 
-            {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
-                    <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">{error}</p>
-                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
-                        <X className="h-4 w-4 text-red-400" />
-                    </button>
-                </div>
-            )}
+            <CardContent className="p-6 pt-0 space-y-4">
+                {error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center justify-between">
+                        <p className="text-[10px] text-destructive font-bold uppercase tracking-widest">{error}</p>
+                        <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-destructive hover:bg-destructive/10">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
 
-            <div className="space-y-3">
-                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-secondary-gray-600 px-1">
-                    <span>{currentValue ? "Active Protocol ID" : t("initialize_unit")}</span>
-                </div>
-                <div className="relative">
-                    <input
-                        type={showKey ? "text" : "password"}
-                        value={value || (showKey ? "" : currentValue)}
-                        onChange={(e) => setValue(e.target.value)}
-                        placeholder={currentValue || "Input Identity Key..."}
-                        className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 pr-24 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all font-mono"
-                    />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        <button
-                            onClick={() => setShowKey(!showKey)}
-                            className="p-2.5 text-secondary-gray-600 hover:text-white transition-colors cursor-pointer rounded-none hover:bg-white/5"
-                        >
-                            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={!value || saving}
-                            className={cn(
-                                "p-2.5 rounded-none transition-all cursor-pointer",
-                                success ? "bg-green-500 text-white" : "bg-brand-500 text-white hover:bg-brand-400 disabled:opacity-0 disabled:scale-95"
-                            )}
-                        >
-                            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : success ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                        </button>
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] px-1">
+                        {currentValue ? "Active Protocol ID" : t("initialize_unit")}
+                    </Label>
+                    <div className="relative">
+                        <Input
+                            type={showKey ? "text" : "password"}
+                            value={value || (showKey ? "" : currentValue)}
+                            onChange={(e) => setValue(e.target.value)}
+                            placeholder={currentValue || "Input Identity Key..."}
+                            className="bg-background/50 border-border/40 focus:border-primary/50 pr-24 font-mono h-11 text-[13px]"
+                        />
+                        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowKey(!showKey)}
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            >
+                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                                size="icon"
+                                onClick={handleSave}
+                                disabled={saving || !value.trim()}
+                                className={cn(
+                                    "h-8 w-8 bg-primary hover:bg-primary/90 transition-all",
+                                    success ? "bg-green-500 hover:bg-green-600" : ""
+                                )}
+                            >
+                                {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : success ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </PremiumCard>
+            </CardContent>
+        </Card>
     );
 }
 
 // ─── Tab 5: Gestão de Mensagens (Templates) ───
 
-function MessagesTab({ templates, globalTemplateSettings, onRefresh, t }: { templates: WhatsAppTemplate[]; globalTemplateSettings: Record<string, string>; onRefresh: () => void, t: any }) {
+function MessagesTab({ templates, globalTemplateSettings, onRefresh, syncing, handleSync, t }: { templates: WhatsAppTemplate[]; globalTemplateSettings: Record<string, string>; onRefresh: () => void; syncing: boolean; handleSync: () => void, t: any }) {
     const [showNew, setShowNew] = useState(false);
-    const [syncing, setSyncing] = useState(false);
     const [mappingSaving, setMappingSaving] = useState(false);
-
-    const handleSync = async () => {
-        setSyncing(true);
-        try {
-            const res = await syncMetaTemplates();
-            if (res.success) {
-                alert(`${t("conected_success")} ${res.count} templates processados.`);
-                onRefresh();
-            }
-        } catch (e: any) {
-            alert(e.message || t("connection_failed"));
-        } finally {
-            setSyncing(false);
-        }
-    };
 
     const handleUpdateMapping = async (key: string, value: string) => {
         setMappingSaving(true);
@@ -1708,70 +1853,80 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh, t }: { temp
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <StatCard icon={<MessageSquare />} color="blue" label={t("active_channels")} value={templates.filter(t => t.is_active).length} sub={t("configuradas")} />
-                <StatCard icon={<Globe />} color="blue" label={t("channels")} value={new Set(templates.map(t => t.language)).size} sub={t("monitored")} />
+                <StatCard icon={<MessageSquare className="h-4 w-4" />} color="blue" label={t("active_channels")} value={templates.filter(t => t.is_active).length} sub={t("configuradas")} />
+                <StatCard icon={<Globe className="h-4 w-4" />} color="blue" label={t("channels")} value={new Set(templates.map(t => t.language)).size} sub={t("monitored")} />
             </div>
 
-            <PremiumCard className="p-8 bg-navy-950/20 border-l-2 border-l-brand-500 rounded-none group hover:bg-navy-950/40 transition-all">
-                <h3 className="text-[11px] font-black text-secondary-gray-500 uppercase tracking-[0.3em] mb-8 flex items-center gap-3 px-1">
-                    <Shield className="h-4 w-4 text-brand-500" /> WhatsApp Meta Dispatch Protocols
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {[
-                        { label: "Executive Summary", key: "META_TEMPLATE_SUMMARY", icon: <MessageSquare className="h-4 w-4" /> },
-                        { label: "Critical Alert", key: "META_TEMPLATE_ALERT", icon: <AlertTriangle className="h-4 w-4" /> },
-                        { label: "Neural Insight", key: "META_TEMPLATE_INSIGHT", icon: <Brain className="h-4 w-4" /> },
-                    ].map((item) => (
-                        <div key={item.key} className="space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-gray-700 flex items-center gap-2 px-1">
-                                {item.icon} {item.label}
-                            </label>
-                            <select
-                                value={globalTemplateSettings[item.key] || ""}
-                                onChange={(e) => handleUpdateMapping(item.key, e.target.value)}
-                                disabled={mappingSaving}
-                                className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all cursor-pointer hover:bg-white/5 appearance-none"
-                            >
-                                <option value="" className="bg-navy-950">{t("unlinked")}</option>
-                                {templates
-                                    .filter(t => t.platform === 'meta')
-                                    .map(t => (
-                                        <option key={t.id} value={t.name} className="bg-navy-950">{t.name} [{t.language}]</option>
-                                    ))
-                                }
-                            </select>
+            <Card className="border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden">
+                <CardHeader className="p-6 border-b border-border/10">
+                    <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-primary" />
+                        <div>
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider">WhatsApp Meta Dispatch Protocols</CardTitle>
+                            <CardDescription className="text-[10px] uppercase tracking-widest mt-0.5">Mapeamento de templates para respostas do sistema</CardDescription>
                         </div>
-                    ))}
-                </div>
-                {mappingSaving && <p className="text-[9px] text-brand-500 font-black uppercase tracking-[0.3em] mt-6 animate-pulse px-1">{t("syncing")}</p>}
-            </PremiumCard>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                            { label: "Executive Summary", key: "META_TEMPLATE_SUMMARY", icon: <MessageSquare className="h-4 w-4" /> },
+                            { label: "Critical Alert", key: "META_TEMPLATE_ALERT", icon: <AlertTriangle className="h-4 w-4" /> },
+                            { label: "Neural Insight", key: "META_TEMPLATE_INSIGHT", icon: <Brain className="h-4 w-4" /> },
+                        ].map((item) => (
+                            <div key={item.key} className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                    {item.icon} {item.label}
+                                </Label>
+                                <select
+                                    value={globalTemplateSettings[item.key] || ""}
+                                    onChange={(e) => handleUpdateMapping(item.key, e.target.value)}
+                                    disabled={mappingSaving}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:border-primary/50"
+                                >
+                                    <option value="" className="bg-background text-foreground">{t("unlinked")}</option>
+                                    {templates
+                                        .filter(t => t.platform === 'meta')
+                                        .map(tmpl => (
+                                            <option key={tmpl.id} value={tmpl.name} className="bg-background text-foreground">{tmpl.name} [{tmpl.language}]</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                    {mappingSaving && <p className="text-[10px] text-primary font-bold uppercase tracking-[0.2em] mt-4 animate-pulse">{t("syncing")}</p>}
+                </CardContent>
+            </Card>
 
-            <div className="flex items-center justify-between bg-navy-950/40 p-6 border border-white/5 rounded-none">
-                <h2 className="text-xl font-black text-white tracking-widest flex items-center gap-4 uppercase">
-                    <MessageSquare className="h-6 w-6 text-brand-500" />
-                    Message Registry
-                </h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4">
                 <div className="flex items-center gap-3">
-                    <button
+                    <div className="h-8 w-1 bg-primary rounded-full" />
+                    <h2 className="text-xl font-bold tracking-tight uppercase">Message Registry</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
                         onClick={handleSync}
                         disabled={syncing}
-                        className="flex items-center gap-3 px-6 py-3 bg-navy-950 border border-white/5 hover:bg-white/5 text-secondary-gray-500 hover:text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer disabled:opacity-50"
+                        className="h-10 gap-2"
                     >
-                        <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                        <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
                         {syncing ? t("syncing") : t("sync")}
-                    </button>
+                    </Button>
                     {!showNew && (
-                        <button
+                        <Button
                             onClick={() => setShowNew(true)}
-                            className="flex items-center gap-3 px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-widest rounded-none transition-all cursor-pointer shadow-lg shadow-brand-500/10"
+                            className="h-10 gap-2"
                         >
-                            <Plus className="h-4 w-4" /> {t("initialize_protocol")}
-                        </button>
+                            <Plus className="h-4 w-4" />
+                            {t("initialize_protocol")}
+                        </Button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-6">
                 {showNew && (
                     <TemplateCard config={null} isNew onRefresh={() => { setShowNew(false); onRefresh(); }} onCancel={() => setShowNew(false)} t={t} />
                 )}
@@ -1780,11 +1935,13 @@ function MessagesTab({ templates, globalTemplateSettings, onRefresh, t }: { temp
                 ))}
 
                 {templates.length === 0 && !showNew && (
-                    <div className="text-center py-24 bg-navy-950/20 border-2 border-dashed border-white/5 rounded-none">
-                        <MessageSquare className="h-12 w-12 text-secondary-gray-700 mx-auto mb-4 opacity-50" />
-                        <p className="text-white font-black uppercase tracking-widest text-[11px]">{t("no_templates")}</p>
-                        <p className="text-secondary-gray-600 text-[9px] mt-2 uppercase tracking-widest leading-loose max-w-sm mx-auto">{t("unit_identity_desc")}</p>
-                    </div>
+                    <Card className="border-2 border-dashed border-border/40 bg-card/20 py-24">
+                        <CardContent className="flex flex-col items-center justify-center text-center">
+                            <MessageSquare className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                            <h3 className="text-sm font-bold uppercase tracking-widest">{t("no_templates")}</h3>
+                            <p className="text-[11px] text-muted-foreground mt-2 max-w-sm">{t("unit_identity_desc")}</p>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
         </div>
@@ -1822,7 +1979,7 @@ function TemplateCard({ config, isNew, onRefresh, onCancel, t }: { config: Whats
     };
 
     const handleDelete = async () => {
-        if (!config?.id || !confirm(t("connection_failed"))) return;
+        if (!config?.id || !confirm(t("confirm_delete") || "Tem certeza que deseja excluir?")) return;
         setError(null);
         try {
             const result = await deleteWhatsAppTemplate(config.id);
@@ -1837,82 +1994,102 @@ function TemplateCard({ config, isNew, onRefresh, onCancel, t }: { config: Whats
     };
 
     return (
-        <PremiumCard className={cn(
-            "p-8 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all",
-            isNew ? "border-2 border-dashed border-brand-500/30" : ""
+        <Card className={cn(
+            "overflow-hidden border-border/40 transition-all bg-card/30 backdrop-blur-sm",
+            isNew && "border-primary/50 border-dashed"
         )}>
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-5">
-                    <div className="h-14 w-14 rounded-sm bg-brand-500/10 flex items-center justify-center border border-brand-500/20">
-                        <MessageSquare className="h-7 w-7 text-brand-500" />
-                    </div>
-                    <div>
-                        <h3 className="text-[13px] font-black text-white uppercase tracking-widest leading-none">
-                            {isNew ? t("initialize_new_unit") : form.name}
-                        </h3>
-                        <div className="flex items-center gap-4 mt-3">
-                            <span className={cn(
-                                "text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-none border",
-                                form.platform === 'meta' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                            )}>
-                                {form.platform} INTERFACE
-                            </span>
-                            {!isNew && <StatusBadge active={form.is_active} t={t} />}
+            <CardHeader className="p-6 pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                            <MessageSquare className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                            <CardTitle className="text-sm font-bold tracking-tight uppercase">
+                                {isNew ? t("initialize_new_unit") : form.name}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="px-2 py-0 h-5 text-[10px] font-bold uppercase tracking-wider">
+                                    {form.platform}
+                                </Badge>
+                                {!isNew && (
+                                    <Badge variant={form.is_active ? "default" : "secondary"} className={cn("px-2 py-0 h-5 text-[10px] font-bold uppercase tracking-wider", form.is_active ? "bg-green-500/10 text-green-500 border-green-500/20" : "")}>
+                                        {form.is_active ? t("active") : t("inactive")}
+                                    </Badge>
+                                )}
+                            </div>
                         </div>
                     </div>
+                    {!isNew && (
+                        <Button variant="ghost" size="icon" onClick={handleDelete} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
-                {!isNew && (
-                    <button onClick={handleDelete} className="p-3 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer rounded-none">
-                        <Trash2 className="h-5 w-5" />
-                    </button>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("protocol_identifier")}</Label>
+                        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="daily_summary_alpha" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("infrastructure_platform")}</Label>
+                        <select
+                            value={form.platform}
+                            onChange={(e) => setForm({ ...form, platform: e.target.value as any })}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all hover:border-primary/50"
+                        >
+                            <option value="meta" className="bg-background text-foreground">Meta Official</option>
+                            <option value="evolution" className="bg-background text-foreground">Evolution API</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("category_manifest")}</Label>
+                        <Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="MARKETING" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("language_locale")}</Label>
+                        <Input value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} placeholder="pt_BR" />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("protocol_payload")}</Label>
+                    <Textarea
+                        value={form.content}
+                        onChange={(e) => setForm({ ...form, content: e.target.value })}
+                        placeholder='{"payload": {"v": 1.0, "components": [...]}}'
+                        className="min-h-[160px] bg-background/50 border-border/40 focus:border-primary/50 font-mono resize-none"
+                    />
+                </div>
+
+                {error && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <p className="text-xs font-medium text-destructive">{error}</p>
+                    </div>
                 )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <InputField label={t("protocol_identifier")} value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="daily_summary_alpha" />
-
-                <div className="space-y-3">
-                    <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("infrastructure_platform")}</label>
-                    <select
-                        value={form.platform}
-                        onChange={(e) => setForm({ ...form, platform: e.target.value as any })}
-                        className="w-full bg-navy-950 border border-white/5 rounded-none px-4 py-4 text-[11px] font-black text-white tracking-widest focus:border-brand-500/50 outline-none transition-all appearance-none"
-                    >
-                        <option value="meta" className="bg-navy-950">{t("meta_official_unit")}</option>
-                        <option value="evolution" className="bg-navy-950">{t("evolution_api_unit")}</option>
-                    </select>
-                </div>
-
-                <InputField label={t("category_manifest")} value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="MARKETING_A1" />
-                <InputField label={t("language_locale")} value={form.language} onChange={(v) => setForm({ ...form, language: v })} placeholder="PT_BR_UTF8" />
-            </div>
-
-            <div className="mt-8 space-y-3">
-                <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{t("protocol_payload")}</label>
-                <textarea
-                    value={form.content}
-                    onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder='{"payload": {"v": 1.0, "components": [...]}}'
-                    className="w-full h-40 bg-navy-950 border border-white/5 rounded-none px-6 py-6 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all font-mono leading-loose resize-none"
-                />
-            </div>
-
-            <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/5">
-                <button
+            </CardContent>
+            <CardFooter className="p-6 pt-0 border-t border-border/5 bg-muted/20 flex items-center gap-3">
+                <Button
                     onClick={handleSave}
                     disabled={saving || !form.name.trim()}
-                    className="flex-1 sm:flex-none px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 cursor-pointer"
+                    className="h-10 gap-2"
                 >
-                    {saving ? <RefreshCw className="h-4 w-4 animate-spin inline mr-3" /> : <Save className="h-4 w-4 inline mr-3" />}
-                    {saving ? t("syncing") : t("authorize_protocol")}
-                </button>
+                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? t("saving") : t("authorize_protocol")}
+                </Button>
                 {isNew && onCancel && (
-                    <button onClick={onCancel} className="px-12 py-4 bg-navy-950 border border-white/5 hover:bg-white/5 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all cursor-pointer">
+                    <Button variant="outline" onClick={onCancel} className="h-10">
                         {t("abort_initialization")}
-                    </button>
+                    </Button>
                 )}
-            </div>
-        </PremiumCard>
+            </CardFooter>
+        </Card>
     );
 }
 
@@ -1953,6 +2130,7 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
     const [selectedPromptId, setSelectedPromptId] = useState<string>("PROMPT_SUMMARY_SYSTEM");
     const [localValue, setLocalValue] = useState("");
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Sync local value when selection or settings change
     useEffect(() => {
@@ -1961,20 +2139,15 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
 
     const activeDef = PROMPT_DEFINITIONS.find(p => p.id === selectedPromptId) || PROMPT_DEFINITIONS[0];
 
-    const [error, setError] = useState<string | null>(null);
-
     const handleSave = async () => {
-        console.log(`[PromptsTab] Saving ${selectedPromptId}:`, localValue.length);
         setSaving(true);
         setError(null);
         try {
             const result = await saveAISetting(selectedPromptId, localValue, t(activeDef.descKey));
-            console.log("[PromptsTab] Save result:", result);
             if (result.error) {
                 setError(result.error);
             } else {
                 onRefresh();
-                alert(`${t(activeDef.labelKey)} ${t("conected_success")}`);
             }
         } catch (e: any) {
             setError(e.message || t("connection_failed"));
@@ -1984,109 +2157,116 @@ function PromptsTab({ aiSettings, onRefresh, t }: { aiSettings: Record<string, s
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-7xl mx-auto h-[calc(100vh-250px)] min-h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[600px]">
             {/* Sidebar List */}
-            <div className="md:col-span-4 bg-navy-950/20 border border-white/5 rounded-none p-4 overflow-y-auto">
-                <h3 className="text-[10px] font-black text-secondary-gray-600 uppercase tracking-[0.3em] mb-6 px-4">{t("neural_protocol_inventory")}</h3>
-                <div className="space-y-3">
-                    {PROMPT_DEFINITIONS.map((def) => (
-                        <button
-                            key={def.id}
-                            onClick={() => setSelectedPromptId(def.id)}
-                            className={cn(
-                                "w-full text-left p-5 rounded-none border transition-all group relative overflow-hidden",
-                                selectedPromptId === def.id
-                                    ? "bg-white/5 border-brand-500/30"
-                                    : "bg-transparent border-transparent hover:bg-white/5"
-                            )}
-                        >
-                            <div className="flex items-start gap-4 z-10 relative">
-                                <div className={cn(
-                                    "p-3 rounded-none transition-all shadow-md",
-                                    selectedPromptId === def.id ? "bg-navy-950 border border-white/10 scale-105" : "bg-navy-950/40"
-                                )}>
-                                    {def.icon}
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className={cn(
-                                        "text-[12px] font-black uppercase tracking-widest leading-none",
-                                        selectedPromptId === def.id ? "text-white" : "text-secondary-gray-500 group-hover:text-white"
+            <Card className="md:col-span-4 border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden flex flex-col">
+                <CardHeader className="p-4 border-b border-border/10">
+                    <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                        {t("neural_protocol_inventory")}
+                    </CardTitle>
+                </CardHeader>
+                <ScrollArea className="flex-1">
+                    <div className="p-2 space-y-1">
+                        {PROMPT_DEFINITIONS.map((def) => (
+                            <button
+                                key={def.id}
+                                onClick={() => setSelectedPromptId(def.id)}
+                                className={cn(
+                                    "w-full text-left p-4 rounded-lg transition-all group relative border",
+                                    selectedPromptId === def.id
+                                        ? "bg-primary/10 border-primary/20"
+                                        : "bg-transparent border-transparent hover:bg-muted/50"
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={cn(
+                                        "p-2 rounded-md transition-all",
+                                        selectedPromptId === def.id ? "bg-background shadow-sm border" : "bg-muted/30"
                                     )}>
-                                        {t(def.labelKey)}
-                                    </h4>
-                                    <p className="text-secondary-gray-700 text-[9px] mt-2 uppercase tracking-widest line-clamp-2 leading-relaxed font-bold">
-                                        {t(def.descKey)}
-                                    </p>
+                                        {React.cloneElement(def.icon as React.ReactElement<{ className?: string }>, { className: "h-4 w-4" })}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className={cn(
+                                            "text-xs font-bold uppercase tracking-wider leading-none",
+                                            selectedPromptId === def.id ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                                        )}>
+                                            {t(def.labelKey)}
+                                        </h4>
+                                        <p className="text-[10px] text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed font-medium">
+                                            {t(def.descKey)}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                            {selectedPromptId === def.id && (
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-500" />
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                            </button>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </Card>
 
             {/* Main Editor */}
-            <div className="md:col-span-8 h-full">
-                <PremiumCard className="h-full flex flex-col p-8 bg-navy-950/20 border border-white/5 rounded-none group hover:bg-navy-950/40 transition-all">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-8 mb-8">
-                        <div className="flex items-center gap-5">
-                            <div className="h-14 w-14 rounded-none bg-brand-500/10 flex items-center justify-center border border-brand-500/20 shadow-xl shadow-brand-500/5">
-                                {activeDef.icon}
+            <Card className="md:col-span-8 border-border/40 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden">
+                <CardHeader className="p-6 border-b border-border/10">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                                {React.cloneElement(activeDef.icon as React.ReactElement<{ className?: string }>, { className: "h-6 w-6" })}
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{t(activeDef.labelKey)}</h2>
-                                <p className="text-[9px] font-black text-secondary-gray-700 uppercase tracking-[0.3em] mt-2 opacity-80">{activeDef.id}</p>
+                                <CardTitle className="text-lg font-bold tracking-tight">{t(activeDef.labelKey)}</CardTitle>
+                                <CardDescription className="text-[10px] font-mono uppercase tracking-widest mt-0.5 opacity-60">
+                                    {activeDef.id}
+                                </CardDescription>
                             </div>
                         </div>
-                        <button
+                        <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="px-12 py-4 bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black uppercase tracking-[0.3em] rounded-none transition-all shadow-xl shadow-brand-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                            className="gap-2 px-6"
                         >
                             {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {saving ? t("syncing") : t("update_protocol_btn")}
-                        </button>
+                        </Button>
                     </div>
+                </CardHeader>
 
-                    <div className="flex-1 min-h-0 relative group">
-                        <textarea
-                            value={localValue}
-                            onChange={(e) => setLocalValue(e.target.value)}
-                            className="w-full h-full bg-navy-950 border border-white/5 rounded-none px-8 py-8 text-[13px] font-black text-white tracking-widest placeholder:text-secondary-gray-800 focus:border-brand-500/50 outline-none transition-all leading-loose resize-none font-mono"
-                            placeholder={activeDef.placeholder}
-                        />
-                        <div className="absolute bottom-6 right-6 bg-brand-500 text-white px-4 py-2 rounded-none text-[10px] font-black pointer-events-none opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 uppercase tracking-widest">
+                <CardContent className="flex-1 p-0 relative">
+                    <Textarea
+                        value={localValue}
+                        onChange={(e) => setLocalValue(e.target.value)}
+                        className="w-full h-full bg-transparent p-8 text-[13px] font-medium leading-relaxed font-mono placeholder:text-muted-foreground/30 focus-visible:ring-0 focus-visible:ring-offset-0 border-0 resize-none shadow-none"
+                        placeholder={activeDef.placeholder}
+                    />
+                    <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                        <Badge variant="outline" className="bg-background/80 backdrop-blur-sm px-2 py-0 h-6 text-[10px] font-mono border-border/20">
                             {localValue.length} LOGS
-                        </div>
+                        </Badge>
                     </div>
+                </CardContent>
 
-
-
-                    {error && (
-                        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-none flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
-                                <p className="text-sm text-red-400 font-black uppercase tracking-widest">{error}</p>
-                            </div>
-                            <button onClick={() => setError(null)} className="p-1 hover:bg-white/5 rounded-none cursor-pointer">
-                                <X className="h-4 w-4 text-red-400" />
-                            </button>
+                {error && (
+                    <div className="m-6 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                            <p className="text-xs font-semibold text-destructive">{error}</p>
                         </div>
-                    )}
+                        <Button variant="ghost" size="icon" onClick={() => setError(null)} className="h-6 w-6 text-destructive hover:bg-destructive/10">
+                            <X className="h-3 w-3" />
+                        </Button>
+                    </div>
+                )}
 
-                    <div className="mt-8 flex items-center gap-4 p-6 bg-navy-950/40 border border-white/5 rounded-none">
-                        <div className="h-10 w-10 rounded-none bg-brand-500/5 flex items-center justify-center shrink-0 border border-brand-500/10">
-                            <Info className="h-5 w-5 text-brand-500" />
+                <CardFooter className="p-4 border-t border-border/10 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-md bg-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
+                            <Info className="h-4 w-4 text-primary" />
                         </div>
-                        <p className="text-[10px] text-secondary-gray-500 uppercase tracking-widest leading-loose font-bold">
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider leading-relaxed">
                             {t("protocol_integrity_note")}
                         </p>
                     </div>
-                </PremiumCard>
-            </div >
-        </div >
+                </CardFooter>
+            </Card>
+        </div>
     );
 }
 
@@ -2102,49 +2282,53 @@ function StatCard({ icon, color, label, value, sub }: { icon: ReactNode; color: 
     };
 
     return (
-        <PremiumCard className="p-0 border border-white/5 rounded-sm overflow-hidden bg-navy-950/20">
-            <div className="p-5 flex items-center gap-4 transition-colors hover:bg-white/5">
+        <Card className="border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-5 flex items-center gap-4">
                 <div className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-sm border flex-shrink-0",
+                    "h-10 w-10 flex items-center justify-center rounded-lg border flex-shrink-0",
                     colorMap[color] || colorMap.brand
                 )}>
-                    <div className="h-4 w-4 overflow-hidden flex items-center justify-center">
-                        {icon}
-                    </div>
+                    {icon}
                 </div>
                 <div className="min-w-0">
-                    <p className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-widest mb-1">{label}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
                     <div className="flex items-baseline gap-2 mt-0.5">
-                        <p className="text-2xl font-black text-white leading-none tabular-nums tracking-tight uppercase">{value}</p>
-                        <span className="text-[9px] font-black text-secondary-gray-500 uppercase tracking-widest leading-none">{sub}</span>
+                        <p className="text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">{sub}</span>
                     </div>
                 </div>
-            </div>
-        </PremiumCard>
+            </CardContent>
+        </Card>
     );
 }
 
 function StatusBadge({ active, t }: { active: boolean, t: any }) {
-    return (
-        <div className={cn(
-            "flex items-center gap-1.5 px-3 py-1 rounded-none border text-[9px] font-black uppercase tracking-widest w-fit",
-            active ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-        )}>
-            <div className={cn("h-1.5 w-1.5 bg-current", active ? "animate-pulse" : "")} />
-            {active ? t("status_open") : t("status_offline")}
-        </div>
+    return active ? (
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 h-6 text-[10px] font-bold uppercase tracking-widest gap-1.5">
+            <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
+            {t("status_open")}
+        </Badge>
+    ) : (
+        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 h-6 text-[10px] font-bold uppercase tracking-widest gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+            {t("status_offline")}
+        </Badge>
     );
 }
 
-function InputField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function InputField({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string, type?: string }) {
     return (
         <div className="space-y-2">
-            <label className="text-[9px] font-black text-secondary-gray-600 uppercase tracking-[0.2em] px-1">{label}</label>
-            <input
+            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{label}</Label>
+            <Input
+                type={type}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full bg-navy-950/40 border border-white/5 rounded-sm px-4 py-3 text-[11px] font-black text-white tracking-widest placeholder:text-secondary-gray-700 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/10 outline-none transition-all"
+                className="bg-background/50 border-border/40 focus:border-primary/50 transition-all h-10 text-sm"
             />
         </div>
     );

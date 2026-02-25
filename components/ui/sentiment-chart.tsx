@@ -7,9 +7,17 @@ interface SentimentChartProps {
 }
 
 export function SentimentChart({ data }: SentimentChartProps) {
+    if (!data || data.length === 0) {
+        return (
+            <div className="h-[200px] w-full flex items-center justify-center border border-dashed rounded-xl bg-muted/5 mt-4">
+                <p className="text-xs text-muted-foreground italic">Aguardando dados de sentimento</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="h-[200px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[200px] w-full mt-4" style={{ minHeight: '200px', minWidth: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                 <LineChart data={data}>
                     <XAxis
                         dataKey="date"

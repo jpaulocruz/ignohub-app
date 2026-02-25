@@ -10,7 +10,7 @@ export default getRequestConfig(async () => {
     const headerStore = await headers();
 
     // 1. Check cookie
-    let locale = cookieStore.get('locale')?.value as Locale | undefined;
+    let locale = cookieStore.get('NEXT_LOCALE')?.value as Locale | undefined;
 
     // 2. Fallback: Accept-Language header
     if (!locale || !locales.includes(locale)) {

@@ -121,7 +121,23 @@
         "no_alerts": "Nenhum alerta recente.",
         "quick_actions": "Ações rápidas",
         "add_community": "Adicionar comunidade",
-        "view_insights": "Ver insights"
+        "view_insights": "Ver insights",
+        "total_groups": "Total de grupos",
+        "total_members": "Total de membros",
+        "total_messages": "Total de mensagens",
+        "engagement": "Engajamento",
+        "weekly_activity": "Atividade semanal",
+        "actionable_insights": "Insights acionáveis",
+        "monitored_groups": "Grupos monitorados",
+        "growth": "em relação ao mês anterior",
+        "action_required": "Ação necessária",
+        "active_alerts": "Alertas ativos",
+        "no_members": "Nenhum membro identificado ainda.",
+        "actions_count": "{count} ações",
+        "most_active_members": "Membros mais ativos",
+        "high_impact": "Impacto Alto",
+        "medium_impact": "Impacto Médio",
+        "low_impact": "Impacto Baixo"
     },
     "inbox": {
         "title": "Feed de inteligência",
@@ -294,6 +310,7 @@
         "collecting_messages": "coletando mensagens",
         "syncing": "Sincronizando...",
         "sync": "Sincronizar",
+        "add_instance": "Adicionar Instância",
         "status_open": "Operacional",
         "status_connecting": "Sincronizando...",
         "status_qr_ready": "Pendente Auth",
@@ -384,7 +401,10 @@
         "protocol_integrity_note": "Esta instrução define o Invariante Global para esta tarefa neural. A especificidade aumenta a integridade do protocolo.",
         "status_offline": "Offline",
         "unlinked": "NÃO VINCULADO",
-        "no_templates": "Nenhum Template de Mensagem Detectado"
+        "no_templates": "Nenhum Template de Mensagem Detectado",
+        "active": "Ativo",
+        "inactive": "Inativo",
+        "confirm_delete": "Tem certeza que deseja excluir?"
     },
     "plans": {
         "title": "Configuração de Planos",
