@@ -64,7 +64,8 @@ export async function registerGroup(data: {
             .single()
 
         // 2. Create Group
-        const externalId = `onb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const externalId = `SB-${shortId}`;
         const { data: group, error: groupError } = await supabase
             .from('groups')
             .insert({

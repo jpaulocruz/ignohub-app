@@ -47,16 +47,16 @@ function ProgressBar({ step, t }: { step: number; t: (key: string) => string }) 
             {STEP_KEYS.map((key, i) => (
                 <div key={key} className="flex-1 flex flex-col items-center gap-1.5">
                     <div className="relative w-full">
-                        <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div className="h-1 bg-muted rounded-full overflow-hidden shadow-inner">
                             <motion.div
-                                className={i <= step ? "h-full bg-primary" : "h-full bg-transparent"}
+                                className={i <= step ? "h-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]" : "h-full bg-transparent"}
                                 initial={{ width: "0%" }}
                                 animate={{ width: i <= step ? "100%" : "0%" }}
-                                transition={{ duration: 0.4, delay: i * 0.05 }}
+                                transition={{ duration: 0.6, ease: "easeOut" }}
                             />
                         </div>
                     </div>
-                    <span className={`text-[10px] font-medium ${i <= step ? "text-primary" : "text-muted-foreground"}`}>
+                    <span className={`text-[10px] font-bold tracking-tight uppercase ${i <= step ? "text-primary" : "text-muted-foreground/60"}`}>
                         {t(key)}
                     </span>
                 </div>
@@ -291,32 +291,34 @@ function StepListening({ groupId, externalId, onConnected, onBack, t }: {
             </div>
 
             <PremiumCard className="p-6 space-y-5">
-                <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">{t('verification_code')}</p>
+                <div className="space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('verification_code')}</p>
                     <div className="flex items-center gap-2">
-                        <code className="flex-1 text-2xl font-mono font-semibold text-foreground text-center bg-muted rounded-lg py-3">
+                        <code className="flex-1 text-3xl font-mono font-black text-primary text-center bg-primary/5 border border-primary/20 rounded-xl py-4 tracking-[0.2em] shadow-inner animate-signal-glow">
                             {externalId || "—"}
                         </code>
-                        <Button variant="outline" size="icon" onClick={handleCopyCode} className="shrink-0">
-                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        <Button variant="outline" size="icon" onClick={handleCopyCode} className="h-14 w-12 shrink-0 border-primary/20 hover:bg-primary/5">
+                            {copied ? <Check className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5 text-primary" />}
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-4 py-4">
                     <div className="relative">
-                        <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-                            <Radio className="h-7 w-7 text-muted-foreground animate-pulse" />
+                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                            <Radio className="h-10 w-10 text-primary animate-signal-glow" />
                         </div>
-                        <motion.div
-                            className="absolute inset-0 rounded-full border border-primary/40"
-                            animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                        />
+                        <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ring-pulse" />
+                        <div className="absolute inset-0 rounded-full border border-primary/20 animate-ring-pulse [animation-delay:1s]" />
                     </div>
-                    <p className="text-xs text-muted-foreground font-mono">
-                        {formatTime(seconds)} {t('elapsed')}
-                    </p>
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest animate-pulse">
+                            {t('listening')}
+                        </p>
+                        <p className="text-sm font-mono font-medium text-muted-foreground">
+                            {formatTime(seconds)}
+                        </p>
+                    </div>
                 </div>
             </PremiumCard>
 

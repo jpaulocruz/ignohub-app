@@ -178,50 +178,22 @@ export class DashboardService {
     }
 
     async getTopMembers(organizationId: string): Promise<TopMember[]> {
-        // Since we don't have a direct "Member" table, we'll use member_insights
-        // as a proxy for the most important members, or query messages.
-        const { data: insights } = await this.supabase
-            .from('member_insights')
+        // Use the new member_profiles table for efficient retrieval
+        const { data: profiles } = await this.supabase
+            .from('member_profiles')
             .select('*')
             .eq('organization_id', organizationId)
-            .order('sentiment_score', { ascending: false });
+            .order('total_messages', { ascending: false })
+            .limit(5);
 
-        // deduplicate insights by author_hash, keeping the one with highest score
-        const uniqueInsights: Record<string, any> = {};
-        (insights || []).forEach(insight => {
-            if (!uniqueInsights[insight.author_hash] || uniqueInsights[insight.author_hash].sentiment_score < insight.sentiment_score) {
-                uniqueInsights[insight.author_hash] = insight;
-            }
-        });
+        if (!profiles) return [];
 
-        const topInsights = Object.values(uniqueInsights)
-            .sort((a: any, b: any) => b.sentiment_score - a.sentiment_score)
-            .slice(0, 5);
-
-        // Also get message counts per author for the last 30 days
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: messages } = await this.supabase
-            .from('messages')
-            .select('author_hash, pre_flags')
-            .eq('organization_id', organizationId)
-            .gte('created_at', thirtyDaysAgo);
-
-        const counts: Record<string, { actions: number, name: string }> = {};
-        (messages || []).forEach(m => {
-            if (!counts[m.author_hash]) {
-                counts[m.author_hash] = {
-                    actions: 0,
-                    name: (m.pre_flags as any)?.sender_name || `Membro ${m.author_hash.substring(0, 5)}`
-                };
-            }
-            counts[m.author_hash].actions++;
-        });
-
-        return topInsights.map(insight => ({
-            author_hash: insight.author_hash,
-            name: counts[insight.author_hash]?.name || `Membro ${insight.author_hash.substring(0, 5)}`,
-            actions: counts[insight.author_hash]?.actions || 0,
-            impact: insight.sentiment_score > 0.5 ? 'High' : insight.sentiment_score > 0.2 ? 'Medium' : 'Low'
-        })).sort((a, b) => b.actions - a.actions);
+        return profiles.map(profile => ({
+            author_hash: profile.author_hash,
+            name: profile.full_name || `Membro ${profile.author_hash.substring(0, 5)}`,
+            actions: profile.total_messages,
+            impact: profile.total_messages > 100 ? 'High' :
+                profile.total_messages > 30 ? 'Medium' : 'Low'
+        }));
     }
 }

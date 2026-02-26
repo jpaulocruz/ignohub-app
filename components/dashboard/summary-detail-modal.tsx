@@ -8,6 +8,11 @@ interface SummaryDetailModalProps {
         id: string
         summary_text: string
         highlights: Record<string, unknown> | null | undefined
+        consultative_advice?: {
+            advice: string
+            recommendations: string[]
+            community_health_score: number
+        } | null
         period_start: string
         period_end: string
     }
@@ -47,23 +52,31 @@ export function SummaryDetailModal({ summary, onClose }: SummaryDetailModalProps
                         </p>
                     </div>
 
-                    {summary.highlights && Object.keys(summary.highlights).length > 0 && (
-                        <div className="space-y-2">
-                            <h3 className="text-sm font-medium text-foreground">Highlights</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {Object.entries(summary.highlights || {}).map(([key, value]) => (
-                                    <div key={key} className="p-3 rounded-lg border border-border bg-card flex gap-3">
-                                        <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                                            <LucideZap className="h-3.5 w-3.5" />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-medium text-muted-foreground">{key}</p>
-                                            <p className="text-sm text-foreground font-medium mt-0.5">
-                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                            </p>
-                                        </div>
+                    {summary.consultative_advice && (
+                        <div className="space-y-4 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                            <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                                <LucideZap className="h-4 w-4 fill-primary" />
+                                IgnoHub Intelligence Advice
+                            </div>
+
+                            <div className="space-y-3">
+                                <p className="text-sm text-foreground font-medium leading-relaxed">
+                                    {summary.consultative_advice.advice}
+                                </p>
+
+                                {summary.consultative_advice.recommendations && summary.consultative_advice.recommendations.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recommendations</p>
+                                        <ul className="space-y-1.5">
+                                            {summary.consultative_advice.recommendations.map((rec, i) => (
+                                                <li key={i} className="text-xs text-foreground flex gap-2">
+                                                    <span className="text-primary">•</span>
+                                                    {rec}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     )}

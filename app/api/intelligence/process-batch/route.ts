@@ -36,6 +36,11 @@ interface AIOutput {
     highlights: Record<string, unknown>;
     alerts?: AIAlert[];
     insights?: AIInsight[];
+    advisor?: {
+        advice: string;
+        recommendations: string[];
+        community_health_score: number;
+    };
 }
 
 interface GroupContext {
@@ -101,9 +106,44 @@ export async function POST(req: Request) {
         const openaiApiKey = aiKeySettingResult.data?.value
         const orgUsers = orgUsersResult.data
 
+        // 4. Update Member Profiles (Aggregated Metrics)
+        if (messages && messages.length > 0) {
+            const authorStats: Record<string, { count: number; lastTs: string; name?: string }> = {}
+            messages.forEach((m: any) => {
+                if (!m.author_hash) return
+                if (!authorStats[m.author_hash]) {
+                    authorStats[m.author_hash] = { count: 0, lastTs: m.message_ts, name: (m.pre_flags as any)?.sender_name }
+                }
+                authorStats[m.author_hash].count++
+                if (new Date(m.message_ts) > new Date(authorStats[m.author_hash].lastTs)) {
+                    authorStats[m.author_hash].lastTs = m.message_ts
+                }
+            })
+
+            const profileUpdates = Object.entries(authorStats).map(([hash, stats]) =>
+                supabase.rpc('increment_member_metrics', {
+                    p_org_id: batch.organization_id,
+                    p_group_id: batch.group_id,
+                    p_author_hash: hash,
+                    p_count: stats.count,
+                    p_last_seen: stats.lastTs,
+                    p_full_name: stats.name
+                })
+            )
+            await Promise.all(profileUpdates)
+            console.log(`[INTELLIGENCE] Updated ${Object.keys(authorStats).length} member profiles.`)
+        }
+
         // 5. Construct Payload
-        const systemSummaryPrompt = (await supabase.from('system_settings').select('value').eq('key', 'PROMPT_SUMMARY_SYSTEM').single()).data?.value ||
+        const [summaryPromptResult, consultativePromptResult] = await Promise.all([
+            supabase.from('system_settings').select('value').eq('key', 'PROMPT_SUMMARY_SYSTEM').single(),
+            supabase.from('system_settings').select('value').eq('key', 'PROMPT_CONSULTATIVE_ADVICE').single()
+        ]);
+
+        const systemSummaryPrompt = summaryPromptResult.data?.value ||
             'Você é um assistente executivo de alto nível. Sua tarefa é analisar as conversas do grupo e gerar um Resumo Executivo estruturado.';
+        const consultativePrompt = consultativePromptResult.data?.value ||
+            'Como consultor estratégico, analise esta conversa e dê conselhos práticos para o dono da comunidade.';
 
         const orgAlertInstructions = group?.organizations?.alert_instructions || '';
         const groupDescription = group?.description || '';
@@ -129,7 +169,8 @@ export async function POST(req: Request) {
                 message_ts: m.message_ts as string
             })) || [],
             prompts: {
-                summary: systemSummaryPrompt
+                summary: systemSummaryPrompt,
+                consultative: consultativePrompt
             }
         }
 
@@ -180,7 +221,12 @@ export async function POST(req: Request) {
                         text: 'João focou imediatamente nas implicações de negócio e risco de churn.',
                         sentiment: 0.2
                     }
-                ]
+                ],
+                advisor: {
+                    advice: 'O grupo está em um momento crítico de segurança. É vital reforçar as políticas de privacidade e acalmar os ânimos dos membros mais técnicos.',
+                    recommendations: ['Publicar nota oficial de segurança', 'Habilitar verificação em duas etapas obrigatória'],
+                    community_health_score: 0.4
+                }
             };
         } else {
             console.log('[INTELLIGENCE] Sending Payload to Agno:', JSON.stringify(payload, null, 2))
@@ -258,6 +304,7 @@ export async function POST(req: Request) {
                 batch_id: batch.id,
                 summary_text: finalSummary,
                 highlights: finalHighlights as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+                consultative_advice: aiOutput.advisor as any, // eslint-disable-line @typescript-eslint/no-explicit-any
                 period_start: batch.start_ts,
                 period_end: batch.end_ts,
                 is_read: false
@@ -281,6 +328,25 @@ export async function POST(req: Request) {
             const { error: insightError } = await supabase.from('member_insights').insert(insightsToInsert)
             if (insightError) console.error('[INTELLIGENCE] Insights persistence error:', insightError)
             else console.log(`[INTELLIGENCE] Persisted ${insightsToInsert.length} member insights.`)
+
+            // 7.1 Persist Group Analytics Snapshot
+            const avgSentiment = aiOutput.insights && aiOutput.insights.length > 0
+                ? aiOutput.insights.reduce((acc: number, curr: any) => acc + (curr.sentiment || 0), 0) / aiOutput.insights.length
+                : 0.5; // Neutral default
+
+            const analyticsToInsert = {
+                organization_id: batch.organization_id,
+                group_id: batch.group_id,
+                period_type: 'batch',
+                period_start: batch.start_ts,
+                sentiment_score: Math.round(avgSentiment * 100),
+                alert_count_total: alertsToInsert.length,
+                alert_count_high: alertsToInsert.filter(a => a.severity === 'high' || a.severity === 'critical').length,
+                top_risk_types: alertsToInsert.map(a => a.type)
+            }
+            const { error: analyticsError } = await supabase.from('group_analytics').insert(analyticsToInsert)
+            if (analyticsError) console.error('[INTELLIGENCE] Analytics persistence error:', analyticsError)
+            else console.log('[INTELLIGENCE] Persisted group analytics.')
         }
 
         // 8. ASYNC NOTIFICATIONS (Delivery Queue)

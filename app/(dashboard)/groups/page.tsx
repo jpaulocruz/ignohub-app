@@ -363,10 +363,10 @@ export default function GroupsPage() {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h3 className="text-base font-semibold text-foreground">
-                                        {editingGroup.jid ? "Edit community" : "Connect community"}
+                                        {editingGroup.jid ? t('group_details') : "Conectar comunidade"}
                                     </h3>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {editingGroup.jid ? "Update group details." : "Follow the steps to connect your group."}
+                                        {editingGroup.jid ? t('subtitle') : "Siga os passos para conectar sua comunidade."}
                                     </p>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingGroup(null)}>
@@ -381,10 +381,10 @@ export default function GroupsPage() {
                                         <div className="flex items-start gap-3">
                                             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                                             <div>
-                                                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">Connection required</h4>
+                                                <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">Conexão necessária</h4>
                                                 <ol className="text-xs text-amber-700 dark:text-amber-300 mt-1 space-y-0.5 list-decimal list-inside">
-                                                    <li>Add the bot to your group as an admin.</li>
-                                                    <li>Send the verification code below in the group chat.</li>
+                                                    <li>Adicione o bot ao seu grupo como admin.</li>
+                                                    <li>Envie o código de verificação abaixo no chat do grupo.</li>
                                                 </ol>
                                             </div>
                                         </div>
@@ -392,12 +392,12 @@ export default function GroupsPage() {
                                         {loadingCode ? (
                                             <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
                                                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                                Generating code...
+                                                Gerando código...
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
-                                                <div className="flex-1 bg-background border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2.5 flex items-center justify-center">
-                                                    <code className="text-amber-600 dark:text-amber-400 font-mono text-lg font-semibold tracking-widest">
+                                                <div className="flex-1 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 flex items-center justify-center animate-signal-glow shadow-inner">
+                                                    <code className="text-primary font-mono text-2xl font-black tracking-[0.2em]">
                                                         {verificationCode || "---"}
                                                     </code>
                                                 </div>
@@ -407,32 +407,31 @@ export default function GroupsPage() {
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                                            Listening for connection...
+                                        <div className="flex items-center gap-2 text-xs text-primary font-bold uppercase tracking-wider">
+                                            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                                            Escutando conexão...
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Name field */}
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Name</Label>
+                                    <Label className="text-sm font-medium">Nome</Label>
                                     <Input
                                         value={editingGroup.name}
                                         onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })}
-                                        placeholder="Group name"
+                                        placeholder="Nome do grupo"
                                         className="focus-visible:ring-primary"
                                     />
                                 </div>
-
                                 {/* Description field */}
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Description</Label>
+                                    <Label className="text-sm font-medium">Descrição</Label>
                                     <textarea
                                         value={editingGroup.description || ''}
                                         onChange={(e) => setEditingGroup({ ...editingGroup, description: e.target.value })}
                                         rows={3}
-                                        placeholder="Brief description of this group..."
+                                        placeholder="Breve descrição deste grupo..."
                                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                                     />
                                 </div>
@@ -448,19 +447,22 @@ export default function GroupsPage() {
                                         )}>
                                             {editingGroup.jid && editingGroup.is_active
                                                 ? <CheckCircle2 className="h-5 w-5" />
-                                                : <Radio className="h-5 w-5 animate-pulse" />}
+                                                : <Radio className="h-5 w-5 animate-signal-glow" />}
                                         </div>
-                                        <div>
+                                        <div className="relative">
+                                            {!(editingGroup.jid && editingGroup.is_active) && (
+                                                <div className="absolute -left-12 top-0 h-9 w-9 rounded-lg border border-primary/20 animate-ring-pulse" />
+                                            )}
                                             <p className={cn(
                                                 "text-sm font-medium",
                                                 editingGroup.jid && editingGroup.is_active
                                                     ? "text-green-700 dark:text-green-400"
                                                     : "text-foreground"
                                             )}>
-                                                {editingGroup.jid && editingGroup.is_active ? "Connected" : "Waiting for connection"}
+                                                {editingGroup.jid && editingGroup.is_active ? "Conectado" : "Aguardando conexão"}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {editingGroup.jid ? "Transmission active" : "Awaiting verification"}
+                                                {editingGroup.jid ? "Transmissão ativa" : "Aguardando verificação"}
                                             </p>
                                         </div>
                                     </div>
@@ -468,10 +470,10 @@ export default function GroupsPage() {
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-                                <Button variant="outline" onClick={() => setEditingGroup(null)}>Cancel</Button>
+                                <Button variant="outline" onClick={() => setEditingGroup(null)}>Cancelar</Button>
                                 <Button onClick={handleSaveEdit} className="gap-2">
                                     <Save className="h-4 w-4" />
-                                    Save changes
+                                    Salvar alterações
                                 </Button>
                             </div>
                         </motion.div>

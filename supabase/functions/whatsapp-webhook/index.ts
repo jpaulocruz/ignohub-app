@@ -217,12 +217,12 @@ async function handleMessageUpsert(supabase: SupabaseClient, instance: string, d
     if (!messageContent) return; // Ignore empty/unsupported messages
 
     // 1. LINKING LOGIC
-    const codeMatch = messageContent.match(/(onb_[a-z0-9_]+)/i);
+    const codeMatch = messageContent.match(/(onb_[a-z0-9_]+|SB-[A-Z0-9]{4})/i);
 
     if (codeMatch && codeMatch[1]) {
         // Linking logic usually happens once, so no need to cache aggressively here.
         // We keep the original logic for linking as it is critical and rare.
-        const verificationCode = codeMatch[1];
+        const verificationCode = codeMatch[1].toUpperCase();
         console.log(`[LINK] Detected code: ${verificationCode} in ${remoteJid}`);
 
         const { data: pendingGroup } = await supabase
@@ -250,6 +250,15 @@ async function handleMessageUpsert(supabase: SupabaseClient, instance: string, d
                 }).eq('id', pendingGroup.id).select('organization_id, name').single();
 
                 if (!updateError && groupAfterUpdate) {
+                    // Sync agent status
+                    await supabase
+                        .from('group_agents')
+                        .update({
+                            status: 'active',
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('group_id', pendingGroup.id);
+
                     // Invalidate keys
                     globalCache.delete(`group:${remoteJid}`);
 

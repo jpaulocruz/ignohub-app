@@ -228,7 +228,7 @@ export async function createEvolutionInstance(name: string) {
 
         console.log("[Evolution Create] Result:", JSON.stringify(result, null, 2));
 
-        // Auto-configure: enable group messages
+        // Auto-configure: enable group messages and set webhook
         try {
             await setSettings(name, {
                 groupsIgnore: false,
@@ -238,8 +238,30 @@ export async function createEvolutionInstance(name: string) {
                 syncFullHistory: false,
                 alwaysOnline: true,
             }, config);
+
+            // Fetch webhook token from settings
+            const supabaseAdmin = createAdminClient();
+            const { data: webhookTokenSetting } = await supabaseAdmin
+                .from("system_settings")
+                .select("value")
+                .eq("key", "WEBHOOK_AUTH_TOKEN")
+                .maybeSingle();
+
+            const webhookToken = webhookTokenSetting?.value || "wh_auto_fixed_token_2026";
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+            if (supabaseUrl) {
+                const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook?token=${webhookToken}`;
+                console.log(`[Evolution Create] Setting webhook: ${webhookUrl}`);
+
+                await setWebhook(name, webhookUrl, [
+                    "MESSAGES_UPSERT",
+                    "CONNECTION_UPDATE",
+                    "GROUPS_UPSERT"
+                ], config);
+            }
         } catch (e) {
-            console.warn("Failed to auto-configure settings:", e);
+            console.warn("Failed to auto-configure settings or webhook:", e);
         }
 
         // Save to Supabase using Admin Client to bypass RLS

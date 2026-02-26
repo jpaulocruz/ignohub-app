@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { WeeklyActivityChart } from "@/components/dashboard/weekly-activity-chart";
 import { DashboardService, DashboardMetrics, WeeklyTrend, GroupOverview } from "@/lib/services/dashboard";
@@ -324,6 +325,35 @@ export default function DashboardPage() {
                                         </PremiumCard>
                                     </motion.div>
                                 ))}
+
+                                {aiInsights.summaries[0]?.consultative_advice && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-4 shadow-sm"
+                                    >
+                                        <div className="absolute top-0 right-0 p-2">
+                                            <Badge variant="outline" className="bg-primary/10 text-[9px] uppercase tracking-tighter border-primary/20 text-primary">
+                                                Consultive Intelligence
+                                            </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                                <Zap className="h-4 w-4 fill-primary" />
+                                            </div>
+                                            <h3 className="text-sm font-bold text-foreground">Destaque do Agno</h3>
+                                        </div>
+                                        <p className="text-xs text-foreground/90 leading-relaxed font-semibold italic">
+                                            "{aiInsights.summaries[0].consultative_advice.advice}"
+                                        </p>
+                                        {aiInsights.summaries[0].consultative_advice.recommendations?.[0] && (
+                                            <div className="mt-3 flex items-center gap-2 text-[10px] text-primary font-bold">
+                                                <ArrowRight className="h-3 w-3" />
+                                                <span>Ação Sugerida: {aiInsights.summaries[0].consultative_advice.recommendations[0]}</span>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
 
                                 {aiInsights.summaries.slice(0, 2).map((summary, idx) => (
                                     <motion.div

@@ -14,8 +14,9 @@ export async function createGroupAction(data: {
         const supabase = (await createClient()) as any
 
         // 1. Create the Group
-        // external_id is mandatory in schema
-        const externalId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        // external_id is mandatory in schema. We use SB-XXXX format for consistency.
+        const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const externalId = `SB-${shortId}`;
 
         const { data: group, error: groupError } = await supabase
             .from('groups')
@@ -250,7 +251,8 @@ export async function getGroupVerificationCode(groupId: string) {
         }
 
         // Generate new code if missing
-        const newCode = `onb_${Math.random().toString(36).substring(2, 8)}`
+        const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newCode = `SB-${shortId}`;
 
         // Use Admin Client to update (bypass RLS)
         if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

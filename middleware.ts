@@ -21,6 +21,30 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
+        const hostname = request.headers.get('host')
+        const pathname = request.nextUrl.pathname
+        const url = request.nextUrl.clone()
+
+        // 1. Detect environment and domains
+        const isAppSubdomain = hostname?.startsWith('app.') || hostname?.includes('localhost')
+        const isMainDomain = hostname === 'ignohub.com' || hostname === 'www.ignohub.com'
+
+        // 2. Subdomain Routing Logic
+        if (isMainDomain) {
+            // Main domain only serves the landing page (root)
+            // Redirect everything else to the app subdomain
+            if (pathname !== '/') {
+                url.hostname = 'app.ignohub.com'
+                return NextResponse.redirect(url)
+            }
+        }
+
+        if (isAppSubdomain && pathname === '/') {
+            // If on app subdomain and visiting root, redirect to dashboard
+            url.pathname = '/dashboard'
+            return NextResponse.redirect(url)
+        }
+
         const supabase = createServerClient<Database>(
             supabaseUrl,
             supabaseAnonKey,
@@ -53,11 +77,8 @@ export async function middleware(request: NextRequest) {
             console.error('[Middleware] Auth error:', userError)
         }
 
-        const pathname = request.nextUrl.pathname
-
         // Protect dashboard routes
         if (!user && pathname.startsWith('/dashboard')) {
-            const url = request.nextUrl.clone()
             url.pathname = '/login'
             return NextResponse.redirect(url)
         }
@@ -67,7 +88,6 @@ export async function middleware(request: NextRequest) {
 
         if (isAdminRoute) {
             if (!user) {
-                const url = request.nextUrl.clone()
                 url.pathname = '/login'
                 return NextResponse.redirect(url)
             }
@@ -84,7 +104,6 @@ export async function middleware(request: NextRequest) {
             }
 
             if (!profile?.is_superadmin) {
-                const url = request.nextUrl.clone()
                 url.pathname = '/403'
                 return NextResponse.redirect(url)
             }
