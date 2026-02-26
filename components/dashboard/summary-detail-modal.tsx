@@ -1,6 +1,6 @@
 'use client'
 
-import { LucideX, LucideCalendar, LucideZap } from 'lucide-react'
+import { LucideX, LucideCalendar, LucideZap, LucideThumbsUp, LucideThumbsDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface SummaryDetailModalProps {
@@ -53,30 +53,44 @@ export function SummaryDetailModal({ summary, onClose }: SummaryDetailModalProps
                     </div>
 
                     {summary.consultative_advice && (
-                        <div className="space-y-4 p-4 rounded-xl border border-primary/20 bg-primary/5">
-                            <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                                <LucideZap className="h-4 w-4 fill-primary" />
-                                IgnoHub Intelligence Advice
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5">
+                                <div className="flex items-center gap-2 text-primary font-bold text-sm mb-3">
+                                    <LucideZap className="h-4 w-4 fill-primary" />
+                                    IgnoHub Intelligence Advice
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-sm text-foreground font-medium leading-relaxed">
+                                        {summary.consultative_advice.advice}
+                                    </p>
+
+                                    {summary.consultative_advice.recommendations && summary.consultative_advice.recommendations.length > 0 && (
+                                        <div className="space-y-2 border-t border-primary/10 pt-3">
+                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recomendações Estratégicas</p>
+                                            <ul className="space-y-1.5">
+                                                {summary.consultative_advice.recommendations.map((rec, i) => (
+                                                    <li key={i} className="text-xs text-foreground flex gap-2">
+                                                        <span className="text-primary">•</span>
+                                                        {rec}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <p className="text-sm text-foreground font-medium leading-relaxed">
-                                    {summary.consultative_advice.advice}
-                                </p>
-
-                                {summary.consultative_advice.recommendations && summary.consultative_advice.recommendations.length > 0 && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recommendations</p>
-                                        <ul className="space-y-1.5">
-                                            {summary.consultative_advice.recommendations.map((rec, i) => (
-                                                <li key={i} className="text-xs text-foreground flex gap-2">
-                                                    <span className="text-primary">•</span>
-                                                    {rec}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
+                            <div className="flex items-center justify-between px-2">
+                                <p className="text-[10px] text-muted-foreground italic">Esta análise ajudou você?</p>
+                                <div className="flex items-center gap-2">
+                                    <button className="p-1.5 hover:bg-primary/10 rounded-lg text-muted-foreground hover:text-primary transition-colors">
+                                        <LucideThumbsUp className="h-3 w-3" />
+                                    </button>
+                                    <button className="p-1.5 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-colors">
+                                        <LucideThumbsDown className="h-3 w-3" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
