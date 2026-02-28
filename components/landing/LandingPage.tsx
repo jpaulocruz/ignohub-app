@@ -196,6 +196,7 @@ export function LandingPage() {
                     <div className="hidden lg:flex items-center gap-10">
                         {["Funcionalidades", "Análise", "Como Funciona"].map((item) => (
                             <Link
+                                key={item}
                                 href={`#${item.toLowerCase().replace(" ", "-")}`}
                                 className="text-sm font-bold text-slate-500 hover:text-primary transition-colors tracking-tight"
                             >
